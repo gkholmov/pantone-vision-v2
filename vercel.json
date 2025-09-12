@@ -1,7 +1,6 @@
 {
   "version": 2,
   "name": "pantone-vision-v2",
-  "description": "Pantone Vision 2.0 - AI-powered color matching and textile pattern transfer",
   "builds": [
     {
       "src": "api/*.py",
