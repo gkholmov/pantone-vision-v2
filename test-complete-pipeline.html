@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantone Vision - Pipeline Test</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .terminal {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .terminal h2 {
+            color: #00ffff;
+            margin-bottom: 15px;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .success {
+            background: #0f5132;
+            color: #d1e7dd;
+            border: 1px solid #badbcc;
+        }
+        
+        .error {
+            background: #842029;
+            color: #f8d7da;
+            border: 1px solid #f5c2c7;
+        }
+        
+        .info {
+            background: #055160;
+            color: #cff4fc;
+            border: 1px solid #b8daff;
+        }
+        
+        .test-controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        button {
+            background: #198754;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            font-family: inherit;
+        }
+        
+        button:hover {
+            background: #146c43;
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        #console-output {
+            white-space: pre-wrap;
+            font-size: 14px;
+            max-height: 500px;
+            overflow-y: auto;
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+        
+        .timestamp {
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Pantone Vision - Complete Pipeline Test</h1>
+    
+    <div class="info status">
+        <strong>Test Environment:</strong> Client-side WebGL texture processing with AI pattern detection
+    </div>
+    
+    <div class="test-controls">
+        <button onclick="runManualTest()">🚀 Run Complete Pipeline Test</button>
+        <button onclick="runWebGLTest()">🎮 Test WebGL Only</button>
+        <button onclick="runCanvas2DTest()">🖼️ Test Canvas 2D Only</button>
+        <button onclick="clearConsole()">🧹 Clear Console</button>
+    </div>
+    
+    <div class="terminal">
+        <h2>📟 Console Output</h2>
+        <div id="console-output"></div>
+    </div>
+    
+    <div class="terminal">
+        <h2>📊 System Capabilities</h2>
+        <div id="capabilities-info">Loading system capabilities...</div>
+    </div>
+    
+    <div class="terminal">
+        <h2>📈 Test Results</h2>
+        <div id="test-results">No tests run yet.</div>
+    </div>
+    
+    <!-- Include all texture processing modules -->
+    <script src="static/js/webgl-texture-renderer.js"></script>
+    <script src="static/js/texture-processor.js"></script>
+    <script src="static/js/garment-segmenter.js"></script>
+    <script src="static/js/canvas-2d-renderer.js"></script>
+    <script src="static/js/texture-controller.js"></script>
+    <script src="test-pipeline.js"></script>
+    
+    <script>
+        // Enhanced console logging for web interface
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function logToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = `[${timestamp}] ${message}\n`;
+            
+            consoleOutput.textContent += logLine;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // Also log to browser console
+            if (type === 'error') {
+                originalConsoleError(message);
+            } else {
+                originalConsoleLog(message);
+            }
+        }
+        
+        // Override console methods
+        console.log = (...args) => {
+            logToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = (...args) => {
+            logToConsole('❌ ERROR: ' + args.join(' '), 'error');
+        };
+        
+        // Manual test functions
+        async function runManualTest() {
+            clearConsole();
+            logToConsole('🧪 Starting complete pipeline test...');
+            
+            try {
+                const result = await testCompletePipeline();
+                updateTestResults(result);
+            } catch (error) {
+                logToConsole(`❌ Test failed: ${error.message}`);
+                updateTestResults({ success: false, error: error.message });
+            }
+        }
+        
+        async function runWebGLTest() {
+            clearConsole();
+            logToConsole('🎮 Starting WebGL-specific test...');
+            
+            try {
+                if (!WebGLTextureRenderer.isSupported()) {
+                    throw new Error('WebGL not supported on this system');
+                }
+                
+                const controller = new TextureController({
+                    preferWebGL: true,
+                    fallbackToCanvas2D: false
+                });
+                
+                await controller.initialize();
+                logToConsole(`✅ WebGL renderer initialized successfully`);
+                
+                controller.destroy();
+            } catch (error) {
+                logToConsole(`❌ WebGL test failed: ${error.message}`);
+            }
+        }
+        
+        async function runCanvas2DTest() {
+            clearConsole();
+            logToConsole('🖼️ Starting Canvas 2D-specific test...');
+            
+            try {
+                if (!Canvas2DRenderer.isSupported()) {
+                    throw new Error('Canvas 2D not supported on this system');
+                }
+                
+                const controller = new TextureController({
+                    preferWebGL: false,
+                    fallbackToCanvas2D: true
+                });
+                
+                await controller.initialize();
+                logToConsole(`✅ Canvas 2D renderer initialized successfully`);
+                
+                controller.destroy();
+            } catch (error) {
+                logToConsole(`❌ Canvas 2D test failed: ${error.message}`);
+            }
+        }
+        
+        function clearConsole() {
+            consoleOutput.textContent = '';
+        }
+        
+        function updateTestResults(result) {
+            const resultsDiv = document.getElementById('test-results');
+            
+            if (result.success) {
+                resultsDiv.innerHTML = `
+                    <div class="success status">
+                        <h3>✅ Test Passed</h3>
+                        <p><strong>Rendering Mode:</strong> ${result.renderingMode}</p>
+                        <p><strong>Processing Time:</strong> ${result.processingTime?.toFixed(2) || 'N/A'}ms</p>
+                        <p><strong>Pattern Type:</strong> ${result.patternType || 'generic'}</p>
+                        <p><strong>Mask Coverage:</strong> ${(result.maskCoverage * 100 || 0).toFixed(1)}%</p>
+                    </div>
+                `;
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="error status">
+                        <h3>❌ Test Failed</h3>
+                        <p><strong>Error:</strong> ${result.error}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function updateCapabilities() {
+            const capabilitiesDiv = document.getElementById('capabilities-info');
+            
+            try {
+                if (typeof TextureController !== 'undefined') {
+                    const caps = TextureController.getSystemCapabilities();
+                    
+                    capabilitiesDiv.innerHTML = `
+                        <div class="info status">
+                            <p><strong>WebGL Support:</strong> ${caps.webgl.supported ? '✅ Yes' : '❌ No'}</p>
+                            <p><strong>Canvas 2D Support:</strong> ${caps.canvas2d.supported ? '✅ Yes' : '❌ No'}</p>
+                            <p><strong>Recommended Mode:</strong> ${caps.recommendedMode || 'None available'}</p>
+                            ${caps.webgl.supported && caps.webgl.capabilities ? `
+                                <p><strong>WebGL Version:</strong> ${caps.webgl.capabilities.version}</p>
+                                <p><strong>Max Texture Size:</strong> ${caps.webgl.capabilities.maxTextureSize}</p>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    capabilitiesDiv.innerHTML = '<div class="error status">TextureController not loaded</div>';
+                }
+            } catch (error) {
+                capabilitiesDiv.innerHTML = `<div class="error status">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-update capabilities when page loads
+        window.addEventListener('load', () => {
+            setTimeout(updateCapabilities, 1000);
+        });
+        
+        // Show loading status
+        logToConsole('📦 Loading texture processing modules...');
+        logToConsole('🌐 Server running on http://localhost:8080');
+        logToConsole('📝 Open browser console for additional debug information');
+        logToConsole('🚀 Ready for testing when modules are loaded');
+    </script>
+</body>
+</html>

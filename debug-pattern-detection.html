@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Pattern Detection</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #000; color: #00ff00; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #333; }
+        canvas { border: 1px solid #666; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Pattern Detection Debug</h1>
+    
+    <input type="file" id="textureInput" accept="image/*">
+    <button onclick="debugPattern()">Debug Pattern Detection</button>
+    
+    <div id="results"></div>
+    
+    <!-- Force cache refresh with timestamp -->
+    <script src="static/js/texture-processor.js?v=<?php echo time(); ?>"></script>
+    
+    <script>
+        let currentImage = null;
+        
+        document.getElementById('textureInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    currentImage = img;
+                    console.log('Image loaded:', img.width, 'x', img.height);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        async function debugPattern() {
+            if (!currentImage) {
+                alert('Please select an image first');
+                return;
+            }
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>🔄 Analyzing pattern...</p>';
+            
+            try {
+                // Create processor with debug logging
+                const processor = new TextureProcessor();
+                
+                // Load texture
+                await processor.loadTexture(currentImage);
+                
+                // Get raw image data for analysis
+                const canvas = processor.canvas;
+                const ctx = processor.ctx;
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                console.log('🔍 Raw image data:', {
+                    width: imageData.width,
+                    height: imageData.height,
+                    dataLength: imageData.data.length
+                });
+                
+                // Manual feature analysis
+                const features = processor.analyzeImageFeatures(imageData);
+                
+                console.log('📊 Analyzed features:', features);
+                
+                // Manual pattern detection
+                const patternResult = processor.detectPattern(imageData);
+                
+                console.log('🎯 Pattern result:', patternResult);
+                
+                // Display detailed results
+                results.innerHTML = `
+                    <div class="result">
+                        <h3>🖼️ Image Analysis</h3>
+                        <p><strong>Dimensions:</strong> ${imageData.width} × ${imageData.height}</p>
+                        <canvas id="debugCanvas" width="${Math.min(imageData.width, 300)}" height="${Math.min(imageData.height, 300)}"></canvas>
+                    </div>
+                    
+                    <div class="result">
+                        <h3>📊 Feature Analysis</h3>
+                        <p><strong>Brightness:</strong> ${features.brightness.toFixed(2)}</p>
+                        <p><strong>Edge Density:</strong> ${(features.edgeDensity * 100).toFixed(2)}%</p>
+                        <p><strong>Transparency:</strong> ${(features.transparency * 100).toFixed(1)}%</p>
+                        <p><strong>Smoothness:</strong> ${(features.smoothness * 100).toFixed(1)}%</p>
+                        <p><strong>Pattern Score:</strong> ${(features.patternScore * 100).toFixed(1)}%</p>
+                        <p><strong>Contrast Ratio:</strong> ${features.contrastRatio ? features.contrastRatio.toFixed(2) : 'N/A'}</p>
+                        <p><strong>Color Variance:</strong> ${features.colorVariance.toFixed(0)}</p>
+                        <p><strong>Unique Colors:</strong> ${features.uniqueColors}</p>
+                    </div>
+                    
+                    <div class="result">
+                        <h3>🎯 Pattern Detection</h3>
+                        <p><strong>Detected Type:</strong> ${patternResult.type}</p>
+                        <p><strong>Confidence:</strong> ${(patternResult.confidence * 100).toFixed(1)}%</p>
+                        <p><strong>Blend Mode:</strong> ${patternResult.blendMode}</p>
+                        <p><strong>Intensity:</strong> ${patternResult.intensity}</p>
+                    </div>
+                    
+                    <div class="result">
+                        <h3>🔧 Threshold Comparison</h3>
+                        <p><strong>Lace Edge Density:</strong> ${(features.edgeDensity * 100).toFixed(2)}% (need: 15-80%)</p>
+                        <p><strong>Lace Brightness:</strong> ${features.brightness.toFixed(0)} (need: >50)</p>
+                        <p><strong>Lace Transparency:</strong> ${(features.transparency * 100).toFixed(1)}% (need: >5%)</p>
+                        <p><strong>Lace Pattern Score:</strong> ${(features.patternScore * 100).toFixed(1)}% (need: >30%)</p>
+                        <p><strong>Lace Contrast:</strong> ${features.contrastRatio ? features.contrastRatio.toFixed(2) : 'N/A'} (need: >2.0)</p>
+                    </div>
+                `;
+                
+                // Draw debug canvas
+                const debugCanvas = document.getElementById('debugCanvas');
+                const debugCtx = debugCanvas.getContext('2d');
+                debugCtx.drawImage(currentImage, 0, 0, debugCanvas.width, debugCanvas.height);
+                
+            } catch (error) {
+                console.error('Debug failed:', error);
+                results.innerHTML = `<p style="color: red;">❌ Debug failed: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

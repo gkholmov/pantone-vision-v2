@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIXED Pantone Vision - Client-Side Texture Processing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .main-panel {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .upload-section { padding: 30px; background: #f8f9fa; }
+        
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area {
+            background: white;
+            border: 3px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 30px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8faff;
+        }
+        
+        .upload-area input[type="file"] { display: none; }
+        
+        .upload-icon { font-size: 2rem; color: #a0aec0; margin-bottom: 10px; }
+        .upload-text { color: #4a5568; font-weight: 500; margin-bottom: 5px; }
+        .upload-hint { color: #718096; font-size: 0.9rem; }
+        
+        .preview-container { margin-top: 15px; }
+        .preview-image {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .controls-section { padding: 30px; }
+        
+        .control-group { margin-bottom: 20px; }
+        .control-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .slider-container { flex: 1; min-width: 200px; }
+        
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: #e2e8f0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        
+        .value-display {
+            background: #e2e8f0;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .checkbox-group { display: flex; gap: 20px; flex-wrap: wrap; }
+        .checkbox-item { display: flex; align-items: center; gap: 8px; }
+        .checkbox-item input[type="checkbox"] { transform: scale(1.2); }
+        
+        .process-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+        
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .process-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status-bar {
+            background: #2d3748;
+            color: white;
+            padding: 12px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .results-section { padding: 30px; background: white; }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .result-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .result-canvas {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        
+        .result-info {
+            background: #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+            text-align: left;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .download-section {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .download-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #38a169;
+            transform: translateY(-1px);
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #9b2c2c;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+            border-left: 4px solid #fc8181;
+        }
+        
+        .success-message {
+            background: #c6f6d5;
+            color: #276749;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+            border-left: 4px solid #48bb78;
+        }
+        
+        @media (max-width: 768px) {
+            .upload-grid, .results-grid { grid-template-columns: 1fr; }
+            .control-row { flex-direction: column; align-items: stretch; }
+            .header h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 FIXED Pantone Vision</h1>
+            <p>Debugging Pattern Detection & Mask Generation</p>
+        </div>
+        
+        <div class="main-panel">
+            <div class="upload-section">
+                <div class="upload-grid">
+                    <div class="upload-area" id="garment-upload">
+                        <input type="file" id="garment-input" accept="image/*">
+                        <div class="upload-icon">👔</div>
+                        <div class="upload-text">Drop garment image</div>
+                        <div class="upload-hint">or click to browse</div>
+                        <div class="preview-container" id="garment-preview"></div>
+                    </div>
+                    
+                    <div class="upload-area" id="texture-upload">
+                        <input type="file" id="texture-input" accept="image/*">
+                        <div class="upload-icon">🧵</div>
+                        <div class="upload-text">Drop texture image</div>
+                        <div class="upload-hint">or click to browse</div>
+                        <div class="preview-container" id="texture-preview"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls-section">
+                <div class="control-group">
+                    <label class="control-label">Texture Intensity</label>
+                    <div class="control-row">
+                        <div class="slider-container">
+                            <input type="range" class="slider" id="intensity-slider" min="0" max="1" step="0.1" value="0.9">
+                        </div>
+                        <div class="value-display" id="intensity-value">0.9</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Mask Generation</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="use-simple-mask" checked>
+                            <label for="use-simple-mask">Use Simple Mask (Fixed)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="auto-adjust">
+                            <label for="auto-adjust">Auto-Adjust Thresholds</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="debug-mode" checked>
+                            <label for="debug-mode">Debug Mode</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="process-btn" id="process-btn" disabled>
+                    🚀 Process with Fixed Algorithm
+                </button>
+            </div>
+            
+            <div class="status-bar">
+                <div id="status-text">Ready - Upload images to begin</div>
+            </div>
+            
+            <div class="results-section" id="results-section" style="display: none;">
+                <h3 style="margin-bottom: 15px;">Processing Results</h3>
+                
+                <div class="results-grid">
+                    <div class="result-panel">
+                        <h4>Generated Mask</h4>
+                        <canvas class="result-canvas" id="mask-canvas"></canvas>
+                        <div class="result-info" id="mask-info"></div>
+                    </div>
+                    
+                    <div class="result-panel">
+                        <h4>Pattern Detection</h4>
+                        <div class="result-info" id="pattern-info"></div>
+                    </div>
+                </div>
+                
+                <div class="result-panel">
+                    <h4>Final Result</h4>
+                    <canvas class="result-canvas" id="result-canvas"></canvas>
+                    <div class="result-info" id="result-info"></div>
+                </div>
+                
+                <div class="download-section">
+                    <button class="download-btn" id="download-result">📥 Download Result</button>
+                    <button class="download-btn" id="download-mask">📥 Download Mask</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Include modules with cache busting -->
+    <script src="static/js/webgl-texture-renderer.js?v=2"></script>
+    <script src="static/js/texture-processor-v2.js?v=2"></script>
+    <script src="static/js/simple-mask-generator.js?v=2"></script>
+    <script src="static/js/canvas-2d-renderer.js?v=2"></script>
+    
+    <script>
+        class FixedTextureApp {
+            constructor() {
+                this.garmentImage = null;
+                this.textureImage = null;
+                this.textureProcessor = null;
+                this.maskGenerator = null;
+                this.renderer = null;
+                
+                this.initializeApp();
+            }
+            
+            async initializeApp() {
+                try {
+                    // Initialize components
+                    this.textureProcessor = new TextureProcessor();
+                    this.maskGenerator = new SimpleMaskGenerator();
+                    
+                    // Try WebGL first, fallback to Canvas 2D
+                    if (WebGLTextureRenderer.isSupported()) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 1024;
+                        canvas.height = 1024;
+                        this.renderer = new WebGLTextureRenderer(canvas);
+                        console.log('✅ Using WebGL renderer');
+                    } else {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 1024;
+                        canvas.height = 1024;
+                        this.renderer = new Canvas2DRenderer(canvas);
+                        console.log('✅ Using Canvas 2D renderer');
+                    }
+                    
+                    this.setupEventListeners();
+                    this.updateStatus('Ready - Fixed algorithm loaded');
+                    
+                } catch (error) {
+                    console.error('Failed to initialize:', error);
+                    this.showError('Failed to initialize: ' + error.message);
+                }
+            }
+            
+            setupEventListeners() {
+                // File uploads
+                this.setupFileUpload('garment-input', 'garment-upload', 'garment-preview', (file, img) => {
+                    this.garmentImage = img;
+                    this.checkReadyToProcess();
+                });
+                
+                this.setupFileUpload('texture-input', 'texture-upload', 'texture-preview', (file, img) => {
+                    this.textureImage = img;
+                    this.checkReadyToProcess();
+                });
+                
+                // Intensity slider
+                const intensitySlider = document.getElementById('intensity-slider');
+                const intensityValue = document.getElementById('intensity-value');
+                intensitySlider.addEventListener('input', (e) => {
+                    intensityValue.textContent = e.target.value;
+                });
+                
+                // Process button
+                document.getElementById('process-btn').addEventListener('click', () => {
+                    this.processTexture();
+                });
+            }
+            
+            setupFileUpload(inputId, areaId, previewId, callback) {
+                const input = document.getElementById(inputId);
+                const area = document.getElementById(areaId);
+                const preview = document.getElementById(previewId);
+                
+                area.addEventListener('click', () => input.click());
+                
+                input.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        this.handleFileUpload(file, preview, callback);
+                    }
+                });
+                
+                // Drag and drop
+                area.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    area.style.borderColor = '#667eea';
+                });
+                
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    area.style.borderColor = '#cbd5e0';
+                    
+                    const files = Array.from(e.dataTransfer.files);
+                    const imageFile = files.find(file => file.type.startsWith('image/'));
+                    
+                    if (imageFile) {
+                        this.handleFileUpload(imageFile, preview, callback);
+                    }
+                });
+            }
+            
+            handleFileUpload(file, previewContainer, callback) {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        previewContainer.innerHTML = `
+                            <img src="${e.target.result}" alt="Preview" class="preview-image">
+                        `;
+                        callback(file, img);
+                    };
+                    img.src = e.target.result;
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            checkReadyToProcess() {
+                const processBtn = document.getElementById('process-btn');
+                const isReady = this.garmentImage && this.textureImage;
+                processBtn.disabled = !isReady;
+                
+                if (isReady) {
+                    this.updateStatus('Ready to process with fixed algorithm');
+                } else {
+                    this.updateStatus('Upload both images to continue');
+                }
+            }
+            
+            async processTexture() {
+                if (!this.garmentImage || !this.textureImage) {
+                    this.showError('Please upload both images');
+                    return;
+                }
+                
+                try {
+                    document.getElementById('process-btn').disabled = true;
+                    this.updateStatus('🔄 Processing with fixed algorithm...');
+                    
+                    const startTime = performance.now();
+                    
+                    // Step 1: Analyze texture pattern with debug info
+                    this.updateStatus('🔍 Analyzing texture pattern...');
+                    await this.textureProcessor.loadTexture(this.textureImage);
+                    const patternResult = this.textureProcessor.detectPattern();
+                    
+                    console.log('🎯 Pattern detection result:', patternResult);
+                    
+                    // Step 2: Generate mask with fixed algorithm
+                    this.updateStatus('🎭 Generating mask...');
+                    
+                    let maskResult;
+                    if (document.getElementById('use-simple-mask').checked) {
+                        const autoAdjust = document.getElementById('auto-adjust').checked;
+                        
+                        if (autoAdjust) {
+                            const thresholds = this.maskGenerator.autoAdjustThresholds(this.garmentImage);
+                            maskResult = this.maskGenerator.generateMask(this.garmentImage, {
+                                ...thresholds,
+                                debug: document.getElementById('debug-mode').checked
+                            });
+                        } else {
+                            maskResult = this.maskGenerator.generateMask(this.garmentImage, {
+                                excludeWhite: true,
+                                excludeVeryLight: true,
+                                whiteThreshold: 240,
+                                lightThreshold: 200,
+                                debug: document.getElementById('debug-mode').checked
+                            });
+                        }
+                    } else {
+                        // Use full mask for testing
+                        maskResult = this.maskGenerator.generateFullMask(this.garmentImage);
+                    }
+                    
+                    console.log('🎭 Mask generation result:', maskResult.stats);
+                    
+                    // Step 3: Render texture
+                    this.updateStatus('🎨 Rendering texture...');
+                    
+                    const intensity = parseFloat(document.getElementById('intensity-slider').value);
+                    
+                    // Set canvas size
+                    this.renderer.canvas.width = this.garmentImage.width;
+                    this.renderer.canvas.height = this.garmentImage.height;
+                    
+                    const resultCanvas = this.renderer.renderTexture(
+                        this.garmentImage,
+                        this.textureImage,
+                        maskResult.canvas,
+                        {
+                            intensity,
+                            blendMode: patternResult.blendMode,
+                            debug: document.getElementById('debug-mode').checked
+                        }
+                    );
+                    
+                    const processingTime = performance.now() - startTime;
+                    
+                    // Display results
+                    this.displayResults(resultCanvas, maskResult, patternResult, processingTime);
+                    
+                    this.updateStatus(`✅ Processing complete in ${processingTime.toFixed(2)}ms`);
+                    this.showSuccess('Texture applied successfully!');
+                    
+                } catch (error) {
+                    console.error('Processing failed:', error);
+                    this.showError('Processing failed: ' + error.message);
+                } finally {
+                    document.getElementById('process-btn').disabled = false;
+                }
+            }
+            
+            displayResults(resultCanvas, maskResult, patternResult, processingTime) {
+                const resultsSection = document.getElementById('results-section');
+                resultsSection.style.display = 'block';
+                
+                // Display mask
+                const maskCanvas = document.getElementById('mask-canvas');
+                const maskInfo = document.getElementById('mask-info');
+                
+                maskCanvas.width = maskResult.canvas.width;
+                maskCanvas.height = maskResult.canvas.height;
+                
+                const maskCtx = maskCanvas.getContext('2d');
+                maskCtx.drawImage(maskResult.canvas, 0, 0);
+                
+                maskInfo.innerHTML = `
+                    <strong>Coverage:</strong> ${(maskResult.stats.coverage * 100).toFixed(1)}%<br>
+                    <strong>Included Pixels:</strong> ${maskResult.stats.whitePixels.toLocaleString()}<br>
+                    <strong>Excluded Pixels:</strong> ${maskResult.stats.blackPixels.toLocaleString()}
+                `;
+                
+                // Display pattern info
+                const patternInfo = document.getElementById('pattern-info');
+                patternInfo.innerHTML = `
+                    <strong>Type:</strong> ${patternResult.type}<br>
+                    <strong>Confidence:</strong> ${(patternResult.confidence * 100).toFixed(1)}%<br>
+                    <strong>Blend Mode:</strong> ${patternResult.blendMode}<br>
+                    <strong>Intensity:</strong> ${patternResult.intensity}<br>
+                    <strong>Features:</strong><br>
+                    • Edge Density: ${(patternResult.features.edgeDensity * 100).toFixed(2)}%<br>
+                    • Brightness: ${patternResult.features.brightness.toFixed(1)}<br>
+                    • Contrast: ${patternResult.features.contrastRatio ? patternResult.features.contrastRatio.toFixed(2) : 'N/A'}<br>
+                    • Transparency: ${(patternResult.features.transparency * 100).toFixed(1)}%
+                `;
+                
+                // Display result
+                const canvas = document.getElementById('result-canvas');
+                const resultInfo = document.getElementById('result-info');
+                
+                canvas.width = resultCanvas.width;
+                canvas.height = resultCanvas.height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(resultCanvas, 0, 0);
+                
+                resultInfo.innerHTML = `
+                    <strong>Dimensions:</strong> ${resultCanvas.width}×${resultCanvas.height}<br>
+                    <strong>Processing Time:</strong> ${processingTime.toFixed(2)}ms<br>
+                    <strong>Renderer:</strong> ${this.renderer.constructor.name}<br>
+                    <strong>Status:</strong> Success
+                `;
+            }
+            
+            updateStatus(text) {
+                document.getElementById('status-text').textContent = text;
+            }
+            
+            showError(message) {
+                this.clearMessages();
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                
+                const controlsSection = document.querySelector('.controls-section');
+                controlsSection.appendChild(errorDiv);
+                
+                setTimeout(() => errorDiv.remove(), 5000);
+            }
+            
+            showSuccess(message) {
+                this.clearMessages();
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success-message';
+                successDiv.textContent = message;
+                
+                const controlsSection = document.querySelector('.controls-section');
+                controlsSection.appendChild(successDiv);
+                
+                setTimeout(() => successDiv.remove(), 5000);
+            }
+            
+            clearMessages() {
+                document.querySelectorAll('.error-message, .success-message').forEach(el => el.remove());
+            }
+        }
+        
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            window.fixedTextureApp = new FixedTextureApp();
+        });
+    </script>
+</body>
+</html>

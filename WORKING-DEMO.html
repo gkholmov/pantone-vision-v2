@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WORKING LACE DETECTOR</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            padding: 20px; 
+            background: #000; 
+            color: #00ff00; 
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .upload-area {
+            border: 2px dashed #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            background: #111;
+        }
+        .upload-area:hover { background: #222; }
+        input[type="file"] { margin: 10px; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .results {
+            border: 1px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            background: #111;
+        }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        canvas { border: 1px solid #666; margin: 10px; }
+        pre { background: #222; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 WORKING LACE DETECTOR</h1>
+        <p>This version FORCES lace detection and fixes mask coverage</p>
+        
+        <div class="upload-area">
+            <h3>Upload Texture (Your Lace Sample)</h3>
+            <input type="file" id="textureInput" accept="image/*">
+        </div>
+        
+        <div class="upload-area">
+            <h3>Upload Garment</h3>
+            <input type="file" id="garmentInput" accept="image/*">
+        </div>
+        
+        <button id="processBtn" disabled>🚀 PROCESS WITH WORKING ALGORITHM</button>
+        
+        <div id="results" class="results" style="display:none;">
+            <h3>📊 RESULTS</h3>
+            <div id="patternResult"></div>
+            <div id="maskResult"></div>
+            <div id="renderResult"></div>
+            
+            <h3>🖼️ VISUAL RESULTS</h3>
+            <div>
+                <h4>Mask (should be white where texture applies):</h4>
+                <canvas id="maskCanvas"></canvas>
+            </div>
+            <div>
+                <h4>Final Result:</h4>
+                <canvas id="resultCanvas"></canvas>
+            </div>
+        </div>
+        
+        <div id="debug"></div>
+    </div>
+    
+    <!-- Load fixed modules -->
+    <script src="static/js/webgl-texture-renderer.js"></script>
+    <script src="static/js/fixed-texture-processor.js"></script>
+    <script src="static/js/simple-mask-generator.js"></script>
+    <script src="static/js/canvas-2d-renderer.js"></script>
+    
+    <script>
+        let garmentImg = null;
+        let textureImg = null;
+        
+        document.getElementById('textureInput').addEventListener('change', function(e) {
+            handleImageUpload(e.target.files[0], (img) => {
+                textureImg = img;
+                checkReady();
+            });
+        });
+        
+        document.getElementById('garmentInput').addEventListener('change', function(e) {
+            handleImageUpload(e.target.files[0], (img) => {
+                garmentImg = img;
+                checkReady();
+            });
+        });
+        
+        function handleImageUpload(file, callback) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = () => callback(img);
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function checkReady() {
+            document.getElementById('processBtn').disabled = !(garmentImg && textureImg);
+        }
+        
+        document.getElementById('processBtn').addEventListener('click', async function() {
+            try {
+                this.disabled = true;
+                
+                log('🔄 Starting WORKING algorithm...');
+                
+                // Step 1: Pattern Detection
+                log('🔍 Pattern Detection...');
+                const processor = new FixedTextureProcessor();
+                await processor.loadTexture(textureImg);
+                const patternResult = processor.detectPattern();
+                
+                displayPatternResult(patternResult);
+                
+                // Step 2: Mask Generation
+                log('🎭 Mask Generation...');
+                const maskGenerator = new SimpleMaskGenerator();
+                const maskResult = maskGenerator.generateMask(garmentImg, {
+                    excludeWhite: true,
+                    whiteThreshold: 220,  // More lenient
+                    lightThreshold: 180,  // More lenient
+                    debug: true
+                });
+                
+                displayMaskResult(maskResult);
+                
+                // Step 3: Rendering
+                log('🎨 Rendering...');
+                let renderer;
+                if (WebGLTextureRenderer.isSupported()) {
+                    const canvas = document.createElement('canvas');
+                    renderer = new WebGLTextureRenderer(canvas);
+                    log('✅ Using WebGL renderer');
+                } else {
+                    const canvas = document.createElement('canvas');
+                    renderer = new Canvas2DRenderer(canvas);
+                    log('✅ Using Canvas 2D renderer');
+                }
+                
+                renderer.canvas.width = garmentImg.width;
+                renderer.canvas.height = garmentImg.height;
+                
+                const resultCanvas = renderer.renderTexture(
+                    garmentImg,
+                    textureImg,
+                    maskResult.canvas,
+                    {
+                        intensity: 0.9,
+                        blendMode: patternResult.blendMode,
+                        debug: true
+                    }
+                );
+                
+                displayRenderResult(resultCanvas);
+                
+                document.getElementById('results').style.display = 'block';
+                log('✅ PROCESSING COMPLETE!');
+                
+            } catch (error) {
+                log('❌ ERROR: ' + error.message, 'error');
+                console.error(error);
+            } finally {
+                this.disabled = false;
+            }
+        });
+        
+        function displayPatternResult(result) {
+            document.getElementById('patternResult').innerHTML = `
+                <h4 class="success">PATTERN DETECTION:</h4>
+                <pre>
+Type: ${result.type}
+Confidence: ${(result.confidence * 100).toFixed(1)}%
+Blend Mode: ${result.blendMode}
+Intensity: ${result.intensity}
+
+Features:
+- Brightness: ${result.features.brightness.toFixed(1)}
+- Edge Density: ${(result.features.edgeDensity * 100).toFixed(2)}%
+- Transparency: ${(result.features.transparency * 100).toFixed(1)}%
+- Contrast Ratio: ${result.features.contrastRatio.toFixed(2)}
+                </pre>
+            `;
+        }
+        
+        function displayMaskResult(result) {
+            document.getElementById('maskResult').innerHTML = `
+                <h4 class="success">MASK GENERATION:</h4>
+                <pre>
+Coverage: ${(result.stats.coverage * 100).toFixed(1)}%
+Included Pixels: ${result.stats.whitePixels.toLocaleString()}
+Excluded Pixels: ${result.stats.blackPixels.toLocaleString()}
+                </pre>
+            `;
+            
+            const maskCanvas = document.getElementById('maskCanvas');
+            maskCanvas.width = result.canvas.width;
+            maskCanvas.height = result.canvas.height;
+            const ctx = maskCanvas.getContext('2d');
+            ctx.drawImage(result.canvas, 0, 0);
+        }
+        
+        function displayRenderResult(canvas) {
+            document.getElementById('renderResult').innerHTML = `
+                <h4 class="success">RENDERING:</h4>
+                <pre>
+Dimensions: ${canvas.width}×${canvas.height}
+Status: Success
+                </pre>
+            `;
+            
+            const resultCanvas = document.getElementById('resultCanvas');
+            resultCanvas.width = canvas.width;
+            resultCanvas.height = canvas.height;
+            const ctx = resultCanvas.getContext('2d');
+            ctx.drawImage(canvas, 0, 0);
+        }
+        
+        function log(message, type = 'info') {
+            const debug = document.getElementById('debug');
+            const className = type === 'error' ? 'error' : 'success';
+            debug.innerHTML += `<div class="${className}">[${new Date().toLocaleTimeString()}] ${message}</div>`;
+            console.log(message);
+        }
+        
+        log('🔥 WORKING algorithm loaded and ready');
+    </script>
+</body>
+</html>

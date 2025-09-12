@@ -1,0 +1,1 @@
+# Shared library for Pantone Vision API endpoints

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIXED: Orientation + Skin Exclusion</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            padding: 20px; 
+            background: #000; 
+            color: #00ff00; 
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .upload-area {
+            border: 2px dashed #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            background: #111;
+        }
+        .upload-area:hover { background: #222; }
+        input[type="file"] { margin: 10px; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .results {
+            border: 1px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            background: #111;
+        }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        .warning { color: #ffff00; }
+        canvas { 
+            border: 1px solid #666; 
+            margin: 10px; 
+            max-width: 300px;
+            max-height: 400px;
+        }
+        pre { background: #222; padding: 10px; overflow-x: auto; }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .image-panel {
+            border: 1px solid #333;
+            padding: 15px;
+            background: #111;
+        }
+        .image-panel h4 {
+            margin-top: 0;
+            color: #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 FIXED: Orientation + Skin Detection</h1>
+        <p class="success">✅ Fixes: Upside-down images, skin texture application, proper dimensions</p>
+        
+        <div class="upload-area">
+            <h3>Upload Texture (Your Lace Sample)</h3>
+            <input type="file" id="textureInput" accept="image/*">
+        </div>
+        
+        <div class="upload-area">
+            <h3>Upload Garment Image</h3>
+            <input type="file" id="garmentInput" accept="image/*">
+        </div>
+        
+        <button id="processBtn" disabled>🚀 PROCESS WITH FIXES</button>
+        
+        <div id="orientationInfo" class="results" style="display:none;">
+            <h3>🔄 IMAGE ORIENTATION</h3>
+            <div id="orientationDetails"></div>
+        </div>
+        
+        <div id="results" class="results" style="display:none;">
+            <h3>📊 PROCESSING RESULTS</h3>
+            <div id="patternResult"></div>
+            <div id="maskResult"></div>
+            
+            <div class="image-grid">
+                <div class="image-panel">
+                    <h4>Original Image</h4>
+                    <canvas id="originalCanvas"></canvas>
+                </div>
+                
+                <div class="image-panel">
+                    <h4>Orientation Corrected</h4>
+                    <canvas id="correctedCanvas"></canvas>
+                </div>
+                
+                <div class="image-panel">
+                    <h4>Generated Mask</h4>
+                    <canvas id="maskCanvas"></canvas>
+                    <div><small>White = texture applied, Black = excluded</small></div>
+                </div>
+                
+                <div class="image-panel">
+                    <h4>Final Result</h4>
+                    <canvas id="resultCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div id="debug"></div>
+    </div>
+    
+    <!-- Load all modules -->
+    <script src="static/js/webgl-texture-renderer.js"></script>
+    <script src="static/js/fixed-texture-processor.js"></script>
+    <script src="static/js/improved-mask-generator.js"></script>
+    <script src="static/js/canvas-2d-renderer.js"></script>
+    
+    <script>
+        let garmentImg = null;
+        let textureImg = null;
+        
+        document.getElementById('textureInput').addEventListener('change', function(e) {
+            handleImageUpload(e.target.files[0], (img) => {
+                textureImg = img;
+                checkReady();
+            });
+        });
+        
+        document.getElementById('garmentInput').addEventListener('change', function(e) {
+            handleImageUpload(e.target.files[0], (img) => {
+                garmentImg = img;
+                checkReady();
+            });
+        });
+        
+        function handleImageUpload(file, callback) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = () => callback(img);
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function checkReady() {
+            document.getElementById('processBtn').disabled = !(garmentImg && textureImg);
+        }
+        
+        document.getElementById('processBtn').addEventListener('click', async function() {
+            try {
+                this.disabled = true;
+                document.getElementById('results').style.display = 'none';
+                document.getElementById('orientationInfo').style.display = 'none';
+                
+                log('🔄 Starting FIXED processing with orientation correction...');
+                
+                // Step 1: Show original image
+                displayOriginalImage(garmentImg);
+                
+                // Step 2: Check and correct orientation
+                log('🔄 Checking image orientation...');
+                const maskGenerator = new ImprovedMaskGenerator();
+                
+                // Convert image to canvas for processing
+                const originalCanvas = document.createElement('canvas');
+                originalCanvas.width = garmentImg.width;
+                originalCanvas.height = garmentImg.height;
+                const originalCtx = originalCanvas.getContext('2d');
+                originalCtx.drawImage(garmentImg, 0, 0);
+                
+                const orientationResult = maskGenerator.correctOrientation(originalCanvas);
+                displayOrientationInfo(orientationResult);
+                
+                // Use corrected image for processing
+                const correctedImage = await canvasToImage(orientationResult.canvas);
+                displayCorrectedImage(orientationResult.canvas);
+                
+                // Step 3: Pattern Detection
+                log('🔍 Pattern Detection...');
+                const processor = new FixedTextureProcessor();
+                await processor.loadTexture(textureImg);
+                const patternResult = processor.detectPattern();
+                
+                displayPatternResult(patternResult);
+                
+                // Step 4: Improved Mask Generation with skin exclusion
+                log('🎭 Generating mask with skin exclusion...');
+                const maskResult = maskGenerator.generateMask(correctedImage, {
+                    excludeSkin: true,
+                    excludeBackground: true,
+                    whiteThreshold: 220,
+                    debug: true
+                });
+                
+                displayMaskResult(maskResult);
+                
+                // Step 5: Rendering with correct dimensions
+                log('🎨 Rendering with proper dimensions...');
+                let renderer;
+                if (WebGLTextureRenderer.isSupported()) {
+                    const canvas = document.createElement('canvas');
+                    renderer = new WebGLTextureRenderer(canvas);
+                    log('✅ Using WebGL renderer');
+                } else {
+                    const canvas = document.createElement('canvas');
+                    renderer = new Canvas2DRenderer(canvas);
+                    log('✅ Using Canvas 2D renderer');
+                }
+                
+                // Set proper dimensions
+                renderer.canvas.width = correctedImage.width;
+                renderer.canvas.height = correctedImage.height;
+                
+                const resultCanvas = renderer.renderTexture(
+                    correctedImage,
+                    textureImg,
+                    maskResult.canvas,
+                    {
+                        intensity: 0.8,
+                        blendMode: patternResult.blendMode,
+                        debug: true
+                    }
+                );
+                
+                displayRenderResult(resultCanvas);
+                
+                document.getElementById('results').style.display = 'block';
+                log('✅ PROCESSING COMPLETE WITH ALL FIXES!');
+                
+            } catch (error) {
+                log('❌ ERROR: ' + error.message, 'error');
+                console.error(error);
+            } finally {
+                this.disabled = false;
+            }
+        });
+        
+        function displayOriginalImage(img) {
+            const canvas = document.getElementById('originalCanvas');
+            canvas.width = Math.min(img.width, 300);
+            canvas.height = Math.min(img.height, 400);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+        
+        function displayOrientationInfo(orientationResult) {
+            document.getElementById('orientationInfo').style.display = 'block';
+            
+            const className = orientationResult.rotated ? 'warning' : 'success';
+            const message = orientationResult.rotated ? 
+                `🔄 Image was ROTATED 180° (confidence: ${(orientationResult.confidence * 100).toFixed(1)}%)` :
+                `✅ Image orientation is correct (confidence: ${(orientationResult.confidence * 100).toFixed(1)}%)`;
+            
+            document.getElementById('orientationDetails').innerHTML = `
+                <div class="${className}">${message}</div>
+            `;
+        }
+        
+        function displayCorrectedImage(canvas) {
+            const displayCanvas = document.getElementById('correctedCanvas');
+            displayCanvas.width = Math.min(canvas.width, 300);
+            displayCanvas.height = Math.min(canvas.height, 400);
+            const ctx = displayCanvas.getContext('2d');
+            ctx.drawImage(canvas, 0, 0, displayCanvas.width, displayCanvas.height);
+        }
+        
+        function displayPatternResult(result) {
+            document.getElementById('patternResult').innerHTML = `
+                <h4 class="success">PATTERN DETECTION:</h4>
+                <pre>
+Type: ${result.type}
+Confidence: ${(result.confidence * 100).toFixed(1)}%
+Blend Mode: ${result.blendMode}
+Intensity: ${result.intensity}
+
+Features:
+- Brightness: ${result.features.brightness.toFixed(1)}
+- Edge Density: ${(result.features.edgeDensity * 100).toFixed(2)}%
+- Transparency: ${(result.features.transparency * 100).toFixed(1)}%
+- Contrast Ratio: ${result.features.contrastRatio.toFixed(2)}
+                </pre>
+            `;
+        }
+        
+        function displayMaskResult(result) {
+            document.getElementById('maskResult').innerHTML = `
+                <h4 class="success">MASK GENERATION (with skin exclusion):</h4>
+                <pre>
+Coverage: ${(result.stats.coverage * 100).toFixed(1)}%
+Total Pixels: ${result.stats.totalPixels.toLocaleString()}
+Included Pixels: ${result.stats.whitePixels.toLocaleString()}
+Excluded Pixels: ${result.stats.blackPixels.toLocaleString()}
+Skin Pixels Excluded: ${result.stats.skinPixels?.toLocaleString() || 'N/A'}
+                </pre>
+            `;
+            
+            const maskCanvas = document.getElementById('maskCanvas');
+            maskCanvas.width = Math.min(result.canvas.width, 300);
+            maskCanvas.height = Math.min(result.canvas.height, 400);
+            const ctx = maskCanvas.getContext('2d');
+            ctx.drawImage(result.canvas, 0, 0, maskCanvas.width, maskCanvas.height);
+        }
+        
+        function displayRenderResult(canvas) {
+            const resultCanvas = document.getElementById('resultCanvas');
+            resultCanvas.width = Math.min(canvas.width, 300);
+            resultCanvas.height = Math.min(canvas.height, 400);
+            const ctx = resultCanvas.getContext('2d');
+            ctx.drawImage(canvas, 0, 0, resultCanvas.width, resultCanvas.height);
+        }
+        
+        async function canvasToImage(canvas) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.src = canvas.toDataURL();
+            });
+        }
+        
+        function log(message, type = 'info') {
+            const debug = document.getElementById('debug');
+            const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'success';
+            debug.innerHTML += `<div class="${className}">[${new Date().toLocaleTimeString()}] ${message}</div>`;
+            console.log(message);
+        }
+        
+        log('🔧 FIXED algorithm loaded with orientation correction and skin exclusion');
+    </script>
+</body>
+</html>

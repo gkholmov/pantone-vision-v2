@@ -1,0 +1,30 @@
+# Pantone Vision 2.0 - Production Requirements (Vercel Optimized)
+# Keep dependencies minimal for faster cold starts
+
+# Core web framework  
+fastapi==0.104.0
+uvicorn==0.24.0
+
+# Image processing (essential only)
+Pillow==10.0.0
+numpy==1.24.0
+
+# HTTP requests
+requests==2.31.0
+aiofiles==23.2.0
+python-multipart==0.0.6
+
+# Database and storage
+supabase==2.0.0
+
+# AI APIs
+google-genai==0.3.0
+
+# Environment configuration
+python-dotenv==1.0.0
+
+# Optional: Remove heavy dependencies to stay under Vercel limits
+# opencv-python - removed (too large for serverless)
+# torch - removed (too large for serverless) 
+# transformers - removed (too large for serverless)
+# huggingface_hub - removed (use direct API calls instead)

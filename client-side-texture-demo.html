@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantone Vision - Client-Side Texture Processing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .main-panel {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .upload-section {
+            padding: 40px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-bottom: 1px solid #e1e8ed;
+        }
+        
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .upload-area {
+            background: white;
+            border: 3px dashed #cbd5e0;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8faff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e6f2ff;
+            transform: scale(1.02);
+        }
+        
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            color: #4a5568;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        
+        .preview-container {
+            margin-top: 20px;
+            position: relative;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .remove-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .controls-section {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+        }
+        
+        .control-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .slider-container {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: #e2e8f0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .value-display {
+            background: #e2e8f0;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+        
+        .process-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .process-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .results-section {
+            padding: 40px;
+            background: white;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .result-panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .result-canvas {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        
+        .result-info {
+            background: #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: left;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .status-bar {
+            background: #2d3748;
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-text {
+            font-weight: 500;
+        }
+        
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: #4a5568;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38b2ac);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .download-section {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .download-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #9b2c2c;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #fc8181;
+        }
+        
+        .success-message {
+            background: #c6f6d5;
+            color: #276749;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #48bb78;
+        }
+        
+        @media (max-width: 768px) {
+            .upload-grid,
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Pantone Vision</h1>
+            <p>Advanced Client-Side Texture Processing with WebGL & AI Pattern Detection</p>
+        </div>
+        
+        <div class="main-panel">
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <div class="upload-grid">
+                    <div class="upload-area" id="garment-upload">
+                        <input type="file" id="garment-input" accept="image/*">
+                        <div class="upload-icon">👔</div>
+                        <div class="upload-text">Drop garment image here</div>
+                        <div class="upload-hint">or click to browse</div>
+                        <div class="preview-container" id="garment-preview"></div>
+                    </div>
+                    
+                    <div class="upload-area" id="texture-upload">
+                        <input type="file" id="texture-input" accept="image/*">
+                        <div class="upload-icon">🧵</div>
+                        <div class="upload-text">Drop texture image here</div>
+                        <div class="upload-hint">or click to browse</div>
+                        <div class="preview-container" id="texture-preview"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="control-group">
+                    <label class="control-label">Texture Intensity</label>
+                    <div class="control-row">
+                        <div class="slider-container">
+                            <input type="range" class="slider" id="intensity-slider" min="0" max="1" step="0.1" value="0.8">
+                        </div>
+                        <div class="value-display" id="intensity-value">0.8</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Processing Options</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="auto-pattern" checked>
+                            <label for="auto-pattern">Auto-detect Pattern</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="exclude-background" checked>
+                            <label for="exclude-background">Exclude Background</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="exclude-skin" checked>
+                            <label for="exclude-skin">Exclude Skin Tones</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="optimize-mask">
+                            <label for="optimize-mask">Optimize Mask</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="post-process">
+                            <label for="post-process">Post-process</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="debug-mode">
+                            <label for="debug-mode">Debug Mode</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="process-btn" id="process-btn" disabled>
+                    🚀 Process Texture Application
+                </button>
+            </div>
+            
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-text" id="status-text">Ready - Upload garment and texture images to begin</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="results-section" id="results-section" style="display: none;">
+                <h3 style="margin-bottom: 20px; text-align: center;">Processing Results</h3>
+                
+                <div class="results-grid">
+                    <div class="result-panel">
+                        <h4>Generated Mask</h4>
+                        <canvas class="result-canvas" id="mask-canvas"></canvas>
+                        <div class="result-info" id="mask-info"></div>
+                    </div>
+                    
+                    <div class="result-panel">
+                        <h4>Final Result</h4>
+                        <canvas class="result-canvas" id="result-canvas"></canvas>
+                        <div class="result-info" id="result-info"></div>
+                    </div>
+                </div>
+                
+                <div class="download-section">
+                    <button class="download-btn" id="download-result">📥 Download Result (PNG)</button>
+                    <button class="download-btn" id="download-mask">📥 Download Mask</button>
+                    <button class="download-btn" id="create-preview">🖼️ Create Preview</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Include our texture processing modules -->
+    <script src="static/js/webgl-texture-renderer.js"></script>
+    <script src="static/js/texture-processor.js"></script>
+    <script src="static/js/garment-segmenter.js"></script>
+    <script src="static/js/canvas-2d-renderer.js"></script>
+    <script src="static/js/texture-controller.js"></script>
+    
+    <script>
+        class TextureProcessingApp {
+            constructor() {
+                this.textureController = null;
+                this.garmentImage = null;
+                this.textureImage = null;
+                this.lastResult = null;
+                
+                this.initializeApp();
+            }
+            
+            async initializeApp() {
+                try {
+                    // Initialize texture controller
+                    this.textureController = new TextureController({
+                        preferWebGL: true,
+                        enableDebug: false,
+                        autoOptimize: true,
+                        maxTextureSize: 1024,
+                        fallbackToCanvas2D: true
+                    });
+                    
+                    await this.textureController.initialize();
+                    
+                    // Setup event listeners
+                    this.setupEventListeners();
+                    
+                    // Update status
+                    this.updateStatus(`Ready - Using ${this.textureController.renderingMode.toUpperCase()} renderer`);
+                    
+                } catch (error) {
+                    console.error('Failed to initialize app:', error);
+                    this.showError('Failed to initialize texture processing engine');
+                }
+            }
+            
+            setupEventListeners() {
+                // File upload handlers
+                this.setupFileUpload('garment-input', 'garment-upload', 'garment-preview', (file, img) => {
+                    this.garmentImage = img;
+                    this.checkReadyToProcess();
+                });
+                
+                this.setupFileUpload('texture-input', 'texture-upload', 'texture-preview', (file, img) => {
+                    this.textureImage = img;
+                    this.checkReadyToProcess();
+                });
+                
+                // Slider updates
+                const intensitySlider = document.getElementById('intensity-slider');
+                const intensityValue = document.getElementById('intensity-value');
+                
+                intensitySlider.addEventListener('input', (e) => {
+                    intensityValue.textContent = e.target.value;
+                });
+                
+                // Process button
+                document.getElementById('process-btn').addEventListener('click', () => {
+                    this.processTexture();
+                });
+                
+                // Download buttons
+                document.getElementById('download-result').addEventListener('click', () => {
+                    this.downloadResult('png');
+                });
+                
+                document.getElementById('download-mask').addEventListener('click', () => {
+                    this.downloadMask();
+                });
+                
+                document.getElementById('create-preview').addEventListener('click', () => {
+                    this.createPreview();
+                });
+                
+                // Debug mode toggle
+                document.getElementById('debug-mode').addEventListener('change', (e) => {
+                    if (this.textureController) {
+                        this.textureController.options.enableDebug = e.target.checked;
+                    }
+                });
+            }
+            
+            setupFileUpload(inputId, areaId, previewId, callback) {
+                const input = document.getElementById(inputId);
+                const area = document.getElementById(areaId);
+                const preview = document.getElementById(previewId);
+                
+                // Click to upload
+                area.addEventListener('click', () => {
+                    input.click();
+                });
+                
+                // Drag and drop
+                area.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    area.classList.add('dragover');
+                });
+                
+                area.addEventListener('dragleave', () => {
+                    area.classList.remove('dragover');
+                });
+                
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    area.classList.remove('dragover');
+                    
+                    const files = Array.from(e.dataTransfer.files);
+                    const imageFile = files.find(file => file.type.startsWith('image/'));
+                    
+                    if (imageFile) {
+                        this.handleFileUpload(imageFile, preview, callback);
+                    }
+                });
+                
+                // File input change
+                input.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        this.handleFileUpload(file, preview, callback);
+                    }
+                });
+            }
+            
+            handleFileUpload(file, previewContainer, callback) {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Show preview
+                        previewContainer.innerHTML = `
+                            <img src="${e.target.result}" alt="Preview" class="preview-image">
+                            <button class="remove-btn" onclick="this.parentElement.innerHTML = ''">×</button>
+                        `;
+                        
+                        // Call callback
+                        callback(file, img);
+                    };
+                    img.src = e.target.result;
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            checkReadyToProcess() {
+                const processBtn = document.getElementById('process-btn');
+                const isReady = this.garmentImage && this.textureImage;
+                
+                processBtn.disabled = !isReady;
+                
+                if (isReady) {
+                    this.updateStatus('Ready to process texture application');
+                } else {
+                    this.updateStatus('Upload both garment and texture images to continue');
+                }
+            }
+            
+            async processTexture() {
+                if (!this.garmentImage || !this.textureImage) {
+                    this.showError('Please upload both garment and texture images');
+                    return;
+                }
+                
+                try {
+                    // Disable process button
+                    const processBtn = document.getElementById('process-btn');
+                    processBtn.disabled = true;
+                    
+                    // Get processing options
+                    const options = {
+                        intensity: parseFloat(document.getElementById('intensity-slider').value),
+                        autoDetectPattern: document.getElementById('auto-pattern').checked,
+                        excludeBackground: document.getElementById('exclude-background').checked,
+                        excludeSkin: document.getElementById('exclude-skin').checked,
+                        optimizeMask: document.getElementById('optimize-mask').checked,
+                        postProcess: document.getElementById('post-process').checked
+                    };
+                    
+                    // Update debug mode
+                    this.textureController.options.enableDebug = document.getElementById('debug-mode').checked;
+                    
+                    // Start processing
+                    this.updateStatus('Processing texture application...', 25);
+                    
+                    const result = await this.textureController.processTexture(
+                        this.garmentImage,
+                        this.textureImage,
+                        options
+                    );
+                    
+                    this.lastResult = result;
+                    
+                    // Show results
+                    this.displayResults(result);
+                    
+                    // Update status
+                    this.updateStatus(
+                        `Processing complete in ${result.renderTime.toFixed(2)}ms using ${result.renderingMode.toUpperCase()}`,
+                        100
+                    );
+                    
+                    // Show success message
+                    this.showSuccess(`Texture applied successfully! Pattern detected: ${result.patternInfo?.type || 'generic'}`);
+                    
+                } catch (error) {
+                    console.error('Processing failed:', error);
+                    this.showError(`Processing failed: ${error.message}`);
+                } finally {
+                    // Re-enable process button
+                    document.getElementById('process-btn').disabled = false;
+                }
+            }
+            
+            displayResults(result) {
+                const resultsSection = document.getElementById('results-section');
+                resultsSection.style.display = 'block';
+                
+                // Display result canvas
+                const resultCanvas = document.getElementById('result-canvas');
+                const resultInfo = document.getElementById('result-info');
+                
+                resultCanvas.width = result.canvas.width;
+                resultCanvas.height = result.canvas.height;
+                
+                const ctx = resultCanvas.getContext('2d');
+                ctx.drawImage(result.canvas, 0, 0);
+                
+                // Display result info
+                resultInfo.innerHTML = `
+                    <strong>Rendering:</strong> ${result.renderingMode.toUpperCase()}<br>
+                    <strong>Pattern:</strong> ${result.patternInfo?.type || 'generic'} (${(result.patternInfo?.confidence * 100 || 0).toFixed(1)}%)<br>
+                    <strong>Render Time:</strong> ${result.renderTime.toFixed(2)}ms<br>
+                    <strong>Dimensions:</strong> ${result.canvas.width}×${result.canvas.height}<br>
+                    <strong>Intensity:</strong> ${result.options.intensity}<br>
+                    <strong>Mask Coverage:</strong> ${(result.maskStats.coverage * 100).toFixed(1)}%
+                `;
+                
+                // Display mask if debug mode is enabled
+                if (this.textureController.options.enableDebug) {
+                    // The mask would be available if we modified the controller to return it
+                    // For now, we'll show a placeholder
+                    const maskCanvas = document.getElementById('mask-canvas');
+                    const maskInfo = document.getElementById('mask-info');
+                    
+                    maskInfo.innerHTML = `
+                        <strong>Coverage:</strong> ${(result.maskStats.coverage * 100).toFixed(1)}%<br>
+                        <strong>Exclusion:</strong> ${(result.maskStats.exclusion * 100).toFixed(1)}%<br>
+                        <strong>Total Pixels:</strong> ${result.maskStats.totalPixels.toLocaleString()}<br>
+                        <strong>White Pixels:</strong> ${result.maskStats.whitePixels.toLocaleString()}<br>
+                        <strong>Black Pixels:</strong> ${result.maskStats.blackPixels.toLocaleString()}
+                    `;
+                }
+            }
+            
+            async downloadResult(format = 'png') {
+                if (!this.lastResult) {
+                    this.showError('No result to download');
+                    return;
+                }
+                
+                try {
+                    const blob = await this.textureController.exportResult(format, 0.92);
+                    this.downloadBlob(blob, `texture-result.${format}`);
+                } catch (error) {
+                    this.showError(`Download failed: ${error.message}`);
+                }
+            }
+            
+            downloadMask() {
+                // This would require modifying the controller to return the mask
+                this.showError('Mask download not yet implemented');
+            }
+            
+            async createPreview() {
+                if (!this.lastResult) {
+                    this.showError('No result to preview');
+                    return;
+                }
+                
+                try {
+                    const previewCanvas = await this.textureController.createPreview(400);
+                    const blob = await new Promise(resolve => previewCanvas.toBlob(resolve, 'image/png'));
+                    this.downloadBlob(blob, 'texture-preview.png');
+                } catch (error) {
+                    this.showError(`Preview creation failed: ${error.message}`);
+                }
+            }
+            
+            downloadBlob(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            updateStatus(text, progress = null) {
+                document.getElementById('status-text').textContent = text;
+                
+                if (progress !== null) {
+                    document.getElementById('progress-fill').style.width = `${progress}%`;
+                } else {
+                    document.getElementById('progress-fill').style.width = '0%';
+                }
+            }
+            
+            showError(message) {
+                // Remove existing messages
+                this.clearMessages();
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                
+                const controlsSection = document.querySelector('.controls-section');
+                controlsSection.appendChild(errorDiv);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => errorDiv.remove(), 5000);
+            }
+            
+            showSuccess(message) {
+                // Remove existing messages
+                this.clearMessages();
+                
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success-message';
+                successDiv.textContent = message;
+                
+                const controlsSection = document.querySelector('.controls-section');
+                controlsSection.appendChild(successDiv);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => successDiv.remove(), 5000);
+            }
+            
+            clearMessages() {
+                const existing = document.querySelectorAll('.error-message, .success-message');
+                existing.forEach(el => el.remove());
+            }
+        }
+        
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.textureApp = new TextureProcessingApp();
+        });
+        
+        // Add some sample images loading functionality
+        window.loadSampleImages = async function() {
+            try {
+                // This would load the sample images we have
+                const garmentImg = new Image();
+                const textureImg = new Image();
+                
+                garmentImg.crossOrigin = 'anonymous';
+                textureImg.crossOrigin = 'anonymous';
+                
+                // You can replace these with your actual sample images
+                garmentImg.src = 'test_bustier_sketch.png';
+                textureImg.src = '/Users/germankholmov/Downloads/Telegram Desktop/photo_2025-09-06_13-06-25.jpg';
+                
+                await Promise.all([
+                    new Promise(resolve => garmentImg.onload = resolve),
+                    new Promise(resolve => textureImg.onload = resolve)
+                ]);
+                
+                window.textureApp.garmentImage = garmentImg;
+                window.textureApp.textureImage = textureImg;
+                
+                // Update previews
+                document.getElementById('garment-preview').innerHTML = `
+                    <img src="${garmentImg.src}" alt="Sample Garment" class="preview-image">
+                `;
+                document.getElementById('texture-preview').innerHTML = `
+                    <img src="${textureImg.src}" alt="Sample Texture" class="preview-image">
+                `;
+                
+                window.textureApp.checkReadyToProcess();
+                
+            } catch (error) {
+                console.error('Failed to load sample images:', error);
+            }
+        };
+    </script>
+</body>
+</html>

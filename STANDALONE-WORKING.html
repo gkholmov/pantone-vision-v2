@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STANDALONE WORKING VERSION</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            padding: 20px; 
+            background: #000; 
+            color: #00ff00; 
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .upload-area {
+            border: 2px dashed #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            background: #111;
+        }
+        input[type="file"] { margin: 10px; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:disabled { background: #333; color: #666; }
+        canvas { 
+            border: 1px solid #666; 
+            margin: 10px; 
+            max-width: 250px;
+            max-height: 350px;
+        }
+        .results { border: 1px solid #00ff00; padding: 20px; margin: 20px 0; background: #111; }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .image-panel { border: 1px solid #333; padding: 15px; background: #111; text-align: center; }
+        pre { background: #222; padding: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 STANDALONE WORKING VERSION</h1>
+        <p class="success">All code embedded - no caching issues!</p>
+        
+        <div class="upload-area">
+            <h3>Upload Texture</h3>
+            <input type="file" id="textureInput" accept="image/*">
+        </div>
+        
+        <div class="upload-area">
+            <h3>Upload Garment</h3>
+            <input type="file" id="garmentInput" accept="image/*">
+        </div>
+        
+        <button id="processBtn" disabled>🚀 PROCESS NOW</button>
+        
+        <div id="results" class="results" style="display:none;">
+            <div class="image-grid">
+                <div class="image-panel">
+                    <h4>1. Original</h4>
+                    <canvas id="originalCanvas"></canvas>
+                </div>
+                <div class="image-panel">
+                    <h4>2. Corrected Orientation</h4>
+                    <canvas id="correctedCanvas"></canvas>
+                    <div id="rotationInfo"></div>
+                </div>
+                <div class="image-panel">
+                    <h4>3. Skin Detection Mask</h4>
+                    <canvas id="maskCanvas"></canvas>
+                    <div id="maskInfo"></div>
+                </div>
+                <div class="image-panel">
+                    <h4>4. Final Result</h4>
+                    <canvas id="resultCanvas"></canvas>
+                    <div id="resultInfo"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="debug" class="results"></div>
+    </div>
+
+    <script>
+        // EMBEDDED STANDALONE CODE - NO EXTERNAL FILES
+        
+        let garmentImg = null;
+        let textureImg = null;
+        
+        // Skin tone detection
+        function isSkinTone(r, g, b) {
+            // RGB-based skin detection
+            if (r > g && g > b) {
+                const rg_ratio = r / Math.max(g, 1);
+                const gb_ratio = g / Math.max(b, 1);
+                
+                if (rg_ratio > 1.1 && rg_ratio < 2.5 && gb_ratio > 1.2 && gb_ratio < 2.8) {
+                    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                    if (luminance > 60 && luminance < 200) {
+                        return true;
+                    }
+                }
+            }
+            
+            // Additional HSV-based check
+            const hsv = rgbToHsv(r, g, b);
+            if (hsv.h >= 0 && hsv.h <= 50 && hsv.s >= 0.15 && hsv.s <= 0.8 && hsv.v >= 0.2 && hsv.v <= 0.95) {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        function rgbToHsv(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const diff = max - min;
+            
+            let h = 0;
+            const s = max === 0 ? 0 : diff / max;
+            const v = max;
+            
+            if (diff !== 0) {
+                switch (max) {
+                    case r: h = (g - b) / diff + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / diff + 2; break;
+                    case b: h = (r - g) / diff + 4; break;
+                }
+                h /= 6;
+            }
+            
+            return { h: h * 360, s, v };
+        }
+        
+        // Orientation detection and correction
+        function detectAndCorrectOrientation(imageCanvas) {
+            const ctx = imageCanvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
+            const { data, width, height } = imageData;
+            
+            let topHalfSkinPixels = 0;
+            let bottomHalfSkinPixels = 0;
+            const midHeight = height / 2;
+            
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = (y * width + x) * 4;
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    
+                    if (isSkinTone(r, g, b)) {
+                        if (y < midHeight) {
+                            topHalfSkinPixels++;
+                        } else {
+                            bottomHalfSkinPixels++;
+                        }
+                    }
+                }
+            }
+            
+            const needsRotation = bottomHalfSkinPixels > topHalfSkinPixels * 1.5;
+            const confidence = Math.abs(topHalfSkinPixels - bottomHalfSkinPixels) / Math.max(topHalfSkinPixels, bottomHalfSkinPixels, 1);
+            
+            let resultCanvas = imageCanvas;
+            let rotated = false;
+            
+            if (needsRotation && confidence > 0.3) {
+                const correctedCanvas = document.createElement('canvas');
+                correctedCanvas.width = imageCanvas.width;
+                correctedCanvas.height = imageCanvas.height;
+                
+                const correctedCtx = correctedCanvas.getContext('2d');
+                correctedCtx.translate(correctedCanvas.width, correctedCanvas.height);
+                correctedCtx.rotate(Math.PI);
+                correctedCtx.drawImage(imageCanvas, 0, 0);
+                
+                resultCanvas = correctedCanvas;
+                rotated = true;
+                log('🔄 Image rotated 180° - skin detected in wrong position');
+            } else {
+                log('✅ Image orientation correct');
+            }
+            
+            return {
+                canvas: resultCanvas,
+                rotated,
+                confidence,
+                topSkinPixels: topHalfSkinPixels,
+                bottomSkinPixels: bottomHalfSkinPixels
+            };
+        }
+        
+        // Generate mask excluding skin
+        function generateMaskExcludingSkin(imageCanvas) {
+            const ctx = imageCanvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
+            const { data, width, height } = imageData;
+            
+            const maskData = new Uint8ClampedArray(data.length);
+            let includedPixels = 0;
+            let skinPixelsExcluded = 0;
+            let whitePixelsExcluded = 0;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const a = data[i + 3];
+                
+                let includePixel = true;
+                
+                // Exclude transparent
+                if (a < 200) {
+                    includePixel = false;
+                }
+                
+                // Exclude skin tones
+                if (includePixel && isSkinTone(r, g, b)) {
+                    includePixel = false;
+                    skinPixelsExcluded++;
+                }
+                
+                // Exclude pure white background (but not white fabric)
+                if (includePixel && r > 235 && g > 235 && b > 235 && 
+                    Math.abs(r - g) < 5 && Math.abs(g - b) < 5) {
+                    includePixel = false;
+                    whitePixelsExcluded++;
+                }
+                
+                if (includePixel) {
+                    maskData[i] = 255;
+                    maskData[i + 1] = 255;
+                    maskData[i + 2] = 255;
+                    maskData[i + 3] = 255;
+                    includedPixels++;
+                } else {
+                    maskData[i] = 0;
+                    maskData[i + 1] = 0;
+                    maskData[i + 2] = 0;
+                    maskData[i + 3] = 255;
+                }
+            }
+            
+            const maskCanvas = document.createElement('canvas');
+            maskCanvas.width = width;
+            maskCanvas.height = height;
+            const maskCtx = maskCanvas.getContext('2d');
+            maskCtx.putImageData(new ImageData(maskData, width, height), 0, 0);
+            
+            const totalPixels = (data.length / 4);
+            const coverage = includedPixels / totalPixels;
+            
+            log(`🎭 Mask generated: ${(coverage * 100).toFixed(1)}% coverage, ${skinPixelsExcluded} skin pixels excluded`);
+            
+            return {
+                canvas: maskCanvas,
+                coverage,
+                includedPixels,
+                skinPixelsExcluded,
+                whitePixelsExcluded,
+                totalPixels
+            };
+        }
+        
+        // Simple texture rendering
+        function renderTexture(garmentCanvas, textureImg, maskCanvas, intensity = 0.8) {
+            const resultCanvas = document.createElement('canvas');
+            resultCanvas.width = garmentCanvas.width;
+            resultCanvas.height = garmentCanvas.height;
+            
+            const ctx = resultCanvas.getContext('2d');
+            
+            // Draw base garment
+            ctx.drawImage(garmentCanvas, 0, 0);
+            
+            // Get image data for pixel manipulation
+            const garmentData = ctx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
+            
+            // Draw texture to temp canvas
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = resultCanvas.width;
+            tempCanvas.height = resultCanvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(textureImg, 0, 0, tempCanvas.width, tempCanvas.height);
+            const textureData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Draw mask to temp canvas
+            const maskTempCanvas = document.createElement('canvas');
+            maskTempCanvas.width = resultCanvas.width;
+            maskTempCanvas.height = resultCanvas.height;
+            const maskTempCtx = maskTempCanvas.getContext('2d');
+            maskTempCtx.drawImage(maskCanvas, 0, 0, maskTempCanvas.width, maskTempCanvas.height);
+            const maskData = maskTempCtx.getImageData(0, 0, maskTempCanvas.width, maskTempCanvas.height);
+            
+            // Apply texture with mask
+            for (let i = 0; i < garmentData.data.length; i += 4) {
+                const maskValue = maskData.data[i] / 255;
+                
+                if (maskValue > 0.1) {
+                    const gr = garmentData.data[i];
+                    const gg = garmentData.data[i + 1];
+                    const gb = garmentData.data[i + 2];
+                    
+                    const tr = textureData.data[i];
+                    const tg = textureData.data[i + 1];
+                    const tb = textureData.data[i + 2];
+                    
+                    // Blend using multiply for lace effect
+                    const blendedR = (gr * tr) / 255;
+                    const blendedG = (gg * tg) / 255;
+                    const blendedB = (gb * tb) / 255;
+                    
+                    // Apply intensity
+                    garmentData.data[i] = Math.round(gr * (1 - intensity * maskValue) + blendedR * intensity * maskValue);
+                    garmentData.data[i + 1] = Math.round(gg * (1 - intensity * maskValue) + blendedG * intensity * maskValue);
+                    garmentData.data[i + 2] = Math.round(gb * (1 - intensity * maskValue) + blendedB * intensity * maskValue);
+                }
+            }
+            
+            ctx.putImageData(garmentData, 0, 0);
+            return resultCanvas;
+        }
+        
+        // Event handlers
+        document.getElementById('textureInput').addEventListener('change', function(e) {
+            handleImageUpload(e.target.files[0], (img) => {
+                textureImg = img;
+                checkReady();
+            });
+        });
+        
+        document.getElementById('garmentInput').addEventListener('change', function(e) {
+            handleImageUpload(e.target.files[0], (img) => {
+                garmentImg = img;
+                checkReady();
+            });
+        });
+        
+        function handleImageUpload(file, callback) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = () => callback(img);
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function checkReady() {
+            document.getElementById('processBtn').disabled = !(garmentImg && textureImg);
+        }
+        
+        document.getElementById('processBtn').addEventListener('click', function() {
+            try {
+                this.disabled = true;
+                log('🔄 Starting STANDALONE processing...');
+                
+                // Step 1: Show original
+                const originalCanvas = document.createElement('canvas');
+                originalCanvas.width = garmentImg.width;
+                originalCanvas.height = garmentImg.height;
+                const originalCtx = originalCanvas.getContext('2d');
+                originalCtx.drawImage(garmentImg, 0, 0);
+                
+                displayCanvas('originalCanvas', originalCanvas);
+                
+                // Step 2: Correct orientation
+                const orientationResult = detectAndCorrectOrientation(originalCanvas);
+                displayCanvas('correctedCanvas', orientationResult.canvas);
+                
+                document.getElementById('rotationInfo').innerHTML = orientationResult.rotated ? 
+                    '<small class="success">✅ ROTATED 180°</small>' : 
+                    '<small>No rotation needed</small>';
+                
+                // Step 3: Generate mask excluding skin
+                const maskResult = generateMaskExcludingSkin(orientationResult.canvas);
+                displayCanvas('maskCanvas', maskResult.canvas);
+                
+                document.getElementById('maskInfo').innerHTML = 
+                    `<small>Coverage: ${(maskResult.coverage * 100).toFixed(1)}%<br>
+                    Skin excluded: ${maskResult.skinPixelsExcluded}</small>`;
+                
+                // Step 4: Render texture
+                const resultCanvas = renderTexture(orientationResult.canvas, textureImg, maskResult.canvas, 0.8);
+                displayCanvas('resultCanvas', resultCanvas);
+                
+                document.getElementById('resultInfo').innerHTML = 
+                    `<small class="success">✅ COMPLETE<br>
+                    No skin texture!</small>`;
+                
+                document.getElementById('results').style.display = 'block';
+                log('✅ STANDALONE processing complete!');
+                
+            } catch (error) {
+                log('❌ Error: ' + error.message, 'error');
+            } finally {
+                this.disabled = false;
+            }
+        });
+        
+        function displayCanvas(canvasId, sourceCanvas) {
+            const displayCanvas = document.getElementById(canvasId);
+            const maxWidth = 250;
+            const maxHeight = 350;
+            
+            const scale = Math.min(maxWidth / sourceCanvas.width, maxHeight / sourceCanvas.height);
+            displayCanvas.width = sourceCanvas.width * scale;
+            displayCanvas.height = sourceCanvas.height * scale;
+            
+            const ctx = displayCanvas.getContext('2d');
+            ctx.drawImage(sourceCanvas, 0, 0, displayCanvas.width, displayCanvas.height);
+        }
+        
+        function log(message, type = 'info') {
+            const debug = document.getElementById('debug');
+            const className = type === 'error' ? 'error' : 'success';
+            debug.innerHTML += `<div class="${className}">[${new Date().toLocaleTimeString()}] ${message}</div>`;
+            console.log(message);
+        }
+        
+        log('🔥 STANDALONE version loaded - all code embedded, no caching issues!');
+    </script>
+</body>
+</html>

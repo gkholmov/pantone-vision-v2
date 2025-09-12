@@ -1,0 +1,137 @@
+{
+  "version": 2,
+  "name": "pantone-vision-v2",
+  "description": "Pantone Vision 2.0 - AI-powered color matching and textile pattern transfer",
+  "builds": [
+    {
+      "src": "api/*.py",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.12",
+        "maxLambdaSize": "250mb",
+        "excludeFiles": [
+          "**/__pycache__/**",
+          "**/.git/**",
+          "**/venv/**",
+          "**/test_env/**",
+          "**/tests/**",
+          "**/*.pyc",
+          "**/*.pyo",
+          "**/.*",
+          "FIXED_PRODUCTION_SERVER*.py",
+          "PRODUCTION_SERVER.py",
+          "GEMINI_NANO_BANAN_SERVER.py",
+          "start_server.py",
+          "test_*.py",
+          "*.html",
+          "*.png",
+          "*.jpg",
+          "*.jpeg",
+          "uploads/**",
+          "results/**",
+          "static/**",
+          "templates/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/api/health"
+    },
+    {
+      "src": "/health",
+      "dest": "/api/health"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health"
+    },
+    {
+      "src": "/api/pantone",
+      "dest": "/api/pantone"
+    },
+    {
+      "src": "/api/texture",
+      "dest": "/api/texture"
+    },
+    {
+      "src": "/api/gemini",
+      "dest": "/api/gemini"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ],
+  "functions": {
+    "api/health.py": {
+      "runtime": "python3.12",
+      "maxDuration": 10,
+      "memory": 512,
+      "regions": ["iad1"]
+    },
+    "api/pantone.py": {
+      "runtime": "python3.12", 
+      "maxDuration": 60,
+      "memory": 1024,
+      "regions": ["iad1"]
+    },
+    "api/texture.py": {
+      "runtime": "python3.12",
+      "maxDuration": 300,
+      "memory": 3008,
+      "regions": ["iad1"]
+    },
+    "api/gemini.py": {
+      "runtime": "python3.12",
+      "maxDuration": 300,
+      "memory": 3008,
+      "regions": ["iad1"]
+    }
+  },
+  "env": {
+    "PYTHONPATH": "$PYTHONPATH:/var/task",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods", 
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-Requested-With, Content-Type, Authorization"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options", 
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ],
+  "regions": ["iad1"],
+  "framework": null,
+  "installCommand": "pip install -r requirements.txt",
+  "buildCommand": null,
+  "devCommand": null,
+  "outputDirectory": null,
+  "cleanUrls": true,
+  "trailingSlash": false
+}

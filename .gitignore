@@ -1,0 +1,214 @@
+# Pantone Vision 2.0 - Git Ignore File
+
+# Environment files (CRITICAL - Never commit API keys)
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js (for tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Database files (local development)
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Image processing temporary files
+uploads/
+temp_images/
+processed_images/
+*.jpg.backup
+*.png.backup
+
+# API keys and secrets (multiple formats)
+*key*
+*secret*
+*token*
+*api*key*
+config/secrets.json
+secrets.yaml
+credentials.json
+
+# Local development files
+local_settings.py
+.local
+dev_config.py
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Compressed files
+*.tar.gz
+*.zip
+*.rar
+
+# Vercel
+.vercel
+*.vercel-build
+
+# Supabase
+.supabase/
+
+# Machine Learning models (if any)
+*.pkl
+*.joblib
+*.model
+models/
+
+# Documentation builds
+docs/_build/
+site/
+
+# Testing
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Profiling
+.prof
+
+# Translations
+*.mo
+*.pot
+
+# Local database backups
+*.dump
+*.sql.backup
+
+# Editor specific
+*.swp
+*.swo
+*~
+
+# Project specific ignores
+/data/raw/
+/data/processed/
+/outputs/
+/experiments/
+
+# Ignore processed results but keep examples
+/results/
+!/results/examples/
+
+# Local configuration overrides
+local_config.py
+override_settings.py
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Temporary folders
+tmp/
+temp/
+cache/
+
+# Don't commit large files
+*.pdf
+*.psd
+*.ai
+*.sketch
+
+# Keep important files (override ignore patterns)
+!.env.example
+!production/
+!api/
+!static/
+!/docs/
+!/README.md
+!/LICENSE

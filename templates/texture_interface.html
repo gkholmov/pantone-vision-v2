@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pantone Vision 2.0 - Texture Edition</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        body { font-family: 'Inter', -apple-system, sans-serif; }
+        .processing { animation: spin 1s linear infinite; }
+        .texture-card { transition: all 0.3s ease; }
+        .texture-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .texture-selected { border-color: #3B82F6; background-color: #EFF6FF; }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Pantone Vision 2.0</h1>
+                    <p class="text-sm text-gray-600">AI-Powered Fashion Design with Texture Application</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="status" class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span class="text-sm text-gray-600">Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Left Panel - Upload & Controls -->
+            <div class="space-y-6">
+                <!-- Workflow Selection -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Workflow Selection</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <button onclick="selectWorkflow('identify')" 
+                                class="workflow-btn p-4 border-2 rounded-lg text-center transition-all hover:border-blue-500"
+                                id="workflow-identify">
+                            <i data-lucide="search" class="w-6 h-6 mx-auto mb-2 text-blue-600"></i>
+                            <div class="text-sm font-medium">Color ID</div>
+                            <div class="text-xs text-gray-500">Identify colors</div>
+                        </button>
+                        <button onclick="selectWorkflow('colorize')" 
+                                class="workflow-btn p-4 border-2 rounded-lg text-center transition-all hover:border-blue-500"
+                                id="workflow-colorize">
+                            <i data-lucide="palette" class="w-6 h-6 mx-auto mb-2 text-green-600"></i>
+                            <div class="text-sm font-medium">Colorize</div>
+                            <div class="text-xs text-gray-500">Color sketches</div>
+                        </button>
+                        <button onclick="selectWorkflow('texture')" 
+                                class="workflow-btn p-4 border-2 rounded-lg text-center transition-all hover:border-blue-500"
+                                id="workflow-texture">
+                            <i data-lucide="layers" class="w-6 h-6 mx-auto mb-2 text-purple-600"></i>
+                            <div class="text-sm font-medium">Texture</div>
+                            <div class="text-xs text-gray-500">Apply textures</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- File Upload -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Upload Image</h3>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                        <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                        <i data-lucide="upload" class="w-12 h-12 mx-auto text-gray-400 mb-4"></i>
+                        <p class="text-gray-600 mb-2">Click to upload or drag and drop</p>
+                        <p class="text-sm text-gray-400">PNG, JPG up to 15MB</p>
+                        <button onclick="document.getElementById('imageInput').click()" 
+                                class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                            Choose File
+                        </button>
+                    </div>
+                    <div id="imagePreview" class="mt-4 hidden">
+                        <img id="previewImg" class="max-w-full h-48 object-contain mx-auto rounded-lg">
+                        <p id="fileName" class="text-sm text-gray-600 text-center mt-2"></p>
+                    </div>
+                </div>
+
+                <!-- Texture Upload -->
+                <div id="texturePanel" class="bg-white rounded-xl shadow-sm p-6 hidden">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Upload Custom Texture</h3>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors">
+                        <input type="file" id="textureInput" accept="image/*" class="hidden" onchange="handleTextureUpload(event)">
+                        <i data-lucide="layers" class="w-10 h-10 mx-auto text-gray-400 mb-3"></i>
+                        <p class="text-gray-600 mb-2">Upload texture pattern</p>
+                        <p class="text-sm text-gray-400">PNG, JPG (fabric textures work best)</p>
+                        <button onclick="document.getElementById('textureInput').click()" 
+                                class="mt-3 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                            Choose Texture
+                        </button>
+                    </div>
+                    <div id="texturePreview" class="mt-4 hidden">
+                        <img id="previewTextureImg" class="max-w-full h-32 object-cover mx-auto rounded-lg border">
+                        <p id="textureFileName" class="text-sm text-gray-600 text-center mt-2"></p>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Intensity</label>
+                        <input type="range" id="intensitySlider" min="0.1" max="1.0" step="0.1" value="0.8" 
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>Subtle</span>
+                            <span id="intensityValue">0.8</span>
+                            <span>Strong</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Process Button -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <button id="processBtn" onclick="processImage()" 
+                            class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        Process Image
+                    </button>
+                    <div id="processing" class="hidden flex items-center justify-center mt-4">
+                        <i data-lucide="loader-2" class="w-5 h-5 processing mr-2"></i>
+                        <span class="text-gray-600">Processing...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Results -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Results</h2>
+                    <div id="results" class="text-center text-gray-500">
+                        Upload an image and select a workflow to get started
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentWorkflow = 'colorize';
+        let uploadedFile = null;
+        let uploadedTextureFile = null;
+        let identifiedColorData = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+            selectWorkflow('colorize');
+            
+            // Update intensity display
+            document.getElementById('intensitySlider').addEventListener('input', function(e) {
+                document.getElementById('intensityValue').textContent = e.target.value;
+            });
+        });
+
+        function selectWorkflow(workflow) {
+            currentWorkflow = workflow;
+            
+            // Update workflow buttons
+            document.querySelectorAll('.workflow-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+            document.getElementById(`workflow-${workflow}`).classList.add('border-blue-500', 'bg-blue-50');
+            
+            // Show/hide texture panel
+            const texturePanel = document.getElementById('texturePanel');
+            if (workflow === 'texture') {
+                texturePanel.classList.remove('hidden');
+            } else {
+                texturePanel.classList.add('hidden');
+            }
+            
+            // Update process button text
+            const processBtn = document.getElementById('processBtn');
+            switch (workflow) {
+                case 'identify':
+                    processBtn.textContent = 'Identify Color';
+                    break;
+                case 'colorize':
+                    processBtn.textContent = 'Colorize Sketch';
+                    break;
+                case 'texture':
+                    processBtn.textContent = 'Apply Texture';
+                    break;
+            }
+        }
+
+        function handleTextureUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            uploadedTextureFile = file;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('texturePreview');
+                const img = document.getElementById('previewTextureImg');
+                const fileName = document.getElementById('textureFileName');
+                
+                img.src = e.target.result;
+                fileName.textContent = file.name;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+            
+            // Update status
+            updateStatus('Texture uploaded successfully', 'success');
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            uploadedFile = file;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewImg').src = e.target.result;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('imagePreview').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function processImage() {
+            if (!uploadedFile) {
+                alert('Please upload an image first');
+                return;
+            }
+            
+            // Check for texture file upload when needed
+            if (currentWorkflow === 'texture' && !uploadedTextureFile) {
+                alert('Please upload a texture image first');
+                return;
+            }
+            
+            const processBtn = document.getElementById('processBtn');
+            const processing = document.getElementById('processing');
+            
+            processBtn.disabled = true;
+            processing.classList.remove('hidden');
+            
+            try {
+                let endpoint, formData;
+                
+                switch (currentWorkflow) {
+                    case 'identify':
+                        endpoint = '/identify-color';
+                        formData = new FormData();
+                        formData.append('file', uploadedFile);
+                        break;
+                        
+                    case 'colorize':
+                        endpoint = '/colorize-sketch';
+                        formData = new FormData();
+                        formData.append('sketch', uploadedFile);
+                        formData.append('style', 'fashion');
+                        if (identifiedColorData) {
+                            formData.append('color_data', JSON.stringify(identifiedColorData));
+                            console.log('🎨 Passing identified color data to colorization:', identifiedColorData.primary_match?.pantone_code);
+                        }
+                        break;
+                        
+                    case 'texture':
+                        endpoint = '/apply-texture';
+                        formData = new FormData();
+                        formData.append('image', uploadedFile);
+                        formData.append('texture_image', uploadedTextureFile);
+                        formData.append('intensity', document.getElementById('intensitySlider').value);
+                        break;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                displayResults(result);
+                
+            } catch (error) {
+                console.error('Processing failed:', error);
+                displayResults({ success: false, error: error.message });
+            } finally {
+                processBtn.disabled = false;
+                processing.classList.add('hidden');
+            }
+        }
+
+        function displayResults(result) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!result.success) {
+                resultsDiv.innerHTML = `
+                    <div class="text-red-600">
+                        <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
+                        <p class="font-medium">Processing Failed</p>
+                        <p class="text-sm mt-1">${result.error}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let content = '';
+            
+            if (currentWorkflow === 'identify') {
+                // Color identification results
+                const colorData = result.data;
+                identifiedColorData = colorData; // Store for colorization step
+                console.log('🎨 Stored color data for next step:', colorData.primary_match?.pantone_code);
+                const primaryMatch = colorData.primary_match || colorData;
+                const hexColor = colorData.technical_data?.hex || primaryMatch.technical_data?.hex || '#CCCCCC';
+                
+                content = `
+                    <div class="space-y-4">
+                        <div class="text-center">
+                            <h3 class="font-semibold text-gray-900 mb-2">Identified Color</h3>
+                            <div class="inline-flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                                <div class="w-16 h-16 rounded-lg border" style="background-color: ${hexColor}"></div>
+                                <div class="text-left">
+                                    <div class="font-medium">${primaryMatch.pantone_code || 'Unknown'}</div>
+                                    <div class="text-sm text-gray-600">${primaryMatch.name || 'Unknown'}</div>
+                                    <div class="text-xs text-gray-500">${hexColor}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Colorization/texture results
+                const imageData = result.data.final_image_base64 || 
+                                result.data.textured_image_base64 || 
+                                result.data.colorized_image_base64;
+                
+                if (!imageData) {
+                    console.error('No image data found in result:', result.data);
+                    content = `
+                        <div class="text-red-600 text-center">
+                            <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
+                            <p class="font-medium">Image processing completed but result not available</p>
+                            <p class="text-sm mt-1">Check server logs for details</p>
+                        </div>
+                    `;
+                } else {
+                    content = `
+                    <div class="space-y-4">
+                        <div class="text-center">
+                            <img src="data:image/png;base64,${imageData}" 
+                                 class="max-w-full h-auto mx-auto rounded-lg shadow-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            ${result.data.texture_type ? `
+                                <div>
+                                    <div class="text-gray-500">Texture</div>
+                                    <div class="font-medium">${result.data.texture_type}</div>
+                                </div>
+                            ` : ''}
+                            ${result.data.intensity_applied ? `
+                                <div>
+                                    <div class="text-gray-500">Intensity</div>
+                                    <div class="font-medium">${Math.round(result.data.intensity_applied * 100)}%</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <button onclick="downloadResult('${imageData}')" 
+                                class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700">
+                            <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
+                            Download Result
+                        </button>
+                    </div>
+                `;
+                }
+            }
+            
+            resultsDiv.innerHTML = content;
+            lucide.createIcons();
+        }
+
+        function downloadResult(base64Data) {
+            const link = document.createElement('a');
+            link.href = 'data:image/png;base64,' + base64Data;
+            link.download = `pantone-vision-result-${Date.now()}.png`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
