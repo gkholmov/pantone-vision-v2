@@ -7,10 +7,13 @@ Shared helper functions for image processing and validation
 import base64
 import io
 import json
+import re
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from PIL import Image
 import numpy as np
+from email.message import EmailMessage
+from email import policy
 
 from .config import MAX_FILE_SIZE, ALLOWED_EXTENSIONS
 
@@ -190,3 +193,84 @@ class ProcessingTimer:
         if self.start_time and self.end_time:
             return (self.end_time - self.start_time).total_seconds() * 1000
         return 0.0
+
+class MultipartField:
+    """Represents a field in multipart form data"""
+    def __init__(self, name: str, value: Any = None, filename: str = None):
+        self.name = name
+        self.value = value
+        self.filename = filename
+        self.file = None
+        
+        # For file fields, create a file-like object
+        if isinstance(value, bytes):
+            self.file = io.BytesIO(value)
+
+class MultipartParser:
+    """Python 3.13+ compatible multipart form data parser (replaces cgi.FieldStorage)"""
+    
+    def __init__(self, body: bytes, content_type: str):
+        self.fields = {}
+        self._parse(body, content_type)
+    
+    def _parse(self, body: bytes, content_type: str):
+        """Parse multipart form data"""
+        try:
+            # Extract boundary from content type
+            boundary_match = re.search(r'boundary=([^;]+)', content_type)
+            if not boundary_match:
+                return
+            
+            boundary = boundary_match.group(1).strip('"')
+            boundary_bytes = ('--' + boundary).encode()
+            
+            # Split by boundary
+            parts = body.split(boundary_bytes)
+            
+            for part in parts[1:-1]:  # Skip first empty part and last closing part
+                if not part.strip():
+                    continue
+                
+                # Split headers and body
+                if b'\r\n\r\n' not in part:
+                    continue
+                    
+                headers_data, body_data = part.split(b'\r\n\r\n', 1)
+                
+                # Parse headers
+                headers_text = headers_data.decode('utf-8', errors='ignore')
+                
+                # Extract field name
+                name_match = re.search(r'name="([^"]*)"', headers_text)
+                if not name_match:
+                    continue
+                
+                field_name = name_match.group(1)
+                
+                # Check if it's a file field
+                filename_match = re.search(r'filename="([^"]*)"', headers_text)
+                
+                if filename_match:
+                    # File field
+                    filename = filename_match.group(1)
+                    field = MultipartField(field_name, body_data, filename)
+                else:
+                    # Regular field
+                    field = MultipartField(field_name, body_data.decode('utf-8', errors='ignore'))
+                
+                self.fields[field_name] = field
+                
+        except Exception as e:
+            print(f"Multipart parsing error: {e}")
+    
+    def get(self, key: str, default=None):
+        """Get field value(s) - returns list for compatibility with cgi.FieldStorage"""
+        if key in self.fields:
+            return [self.fields[key]]
+        return default or []
+    
+    def __contains__(self, key: str) -> bool:
+        return key in self.fields
+    
+    def __getitem__(self, key: str):
+        return self.fields[key]

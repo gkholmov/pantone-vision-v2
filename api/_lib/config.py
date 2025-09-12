@@ -20,17 +20,27 @@ MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 PROCESSING_TIMEOUT = 300  # 5 minutes (Vercel limit)
 
-# API Keys (loaded from environment)
-GEMINI_API_KEY = get_env_var("GEMINI_API_KEY")
-ANTHROPIC_API_KEY = get_env_var("ANTHROPIC_API_KEY") 
-HUGGINGFACE_API_KEY = get_env_var("HUGGINGFACE_API_KEY")
-REPLICATE_API_KEY = get_env_var("REPLICATE_API_KEY", required=False)
-STABILITY_API_KEY = get_env_var("STABILITY_API_KEY", required=False)
-
-# Database Configuration
-SUPABASE_URL = get_env_var("SUPABASE_URL")
-SUPABASE_ANON_KEY = get_env_var("SUPABASE_ANON_KEY")
-SUPABASE_SERVICE_ROLE_KEY = get_env_var("SUPABASE_SERVICE_ROLE_KEY", required=False)
+# API Keys (loaded from environment with fallbacks for import safety)
+try:
+    GEMINI_API_KEY = get_env_var("GEMINI_API_KEY")
+    ANTHROPIC_API_KEY = get_env_var("ANTHROPIC_API_KEY") 
+    HUGGINGFACE_API_KEY = get_env_var("HUGGINGFACE_API_KEY")
+    SUPABASE_URL = get_env_var("SUPABASE_URL")
+    SUPABASE_ANON_KEY = get_env_var("SUPABASE_ANON_KEY")
+    REPLICATE_API_KEY = get_env_var("REPLICATE_API_KEY", required=False)
+    STABILITY_API_KEY = get_env_var("STABILITY_API_KEY", required=False)
+    SUPABASE_SERVICE_ROLE_KEY = get_env_var("SUPABASE_SERVICE_ROLE_KEY", required=False)
+except ValueError as e:
+    print(f"Warning: Config loading failed ({e}), using fallback values")
+    # Fallback values for import safety
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "") 
+    HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+    SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+    REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
+    STABILITY_API_KEY = os.getenv("STABILITY_API_KEY", "")
+    SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # Application Settings
 APP_VERSION = "2.0.0"

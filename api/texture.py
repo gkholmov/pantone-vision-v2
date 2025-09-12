@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 import base64
 from io import BytesIO
-import cgi
+# cgi module removed in Python 3.13+, using custom multipart parser
 
 # Add current directory to path for relative imports
 sys.path.insert(0, os.path.dirname(__file__))
@@ -66,6 +66,65 @@ except ImportError:
     
     def cleanup_connections():
         pass
+    
+    # Simple multipart parser for Python 3.13+ compatibility
+    import re
+    
+    class MultipartField:
+        def __init__(self, name, value=None, filename=None):
+            self.name = name
+            self.value = value
+            self.filename = filename
+            self.file = None
+            if isinstance(value, bytes):
+                self.file = BytesIO(value)
+    
+    class MultipartParser:
+        def __init__(self, body, content_type):
+            self.fields = {}
+            self._parse(body, content_type)
+        
+        def _parse(self, body, content_type):
+            try:
+                boundary_match = re.search(r'boundary=([^;]+)', content_type)
+                if not boundary_match:
+                    return
+                boundary = boundary_match.group(1).strip('"')
+                boundary_bytes = ('--' + boundary).encode()
+                parts = body.split(boundary_bytes)
+                
+                for part in parts[1:-1]:
+                    if not part.strip():
+                        continue
+                    if b'\r\n\r\n' not in part:
+                        continue
+                    headers_data, body_data = part.split(b'\r\n\r\n', 1)
+                    headers_text = headers_data.decode('utf-8', errors='ignore')
+                    name_match = re.search(r'name="([^"]*)"', headers_text)
+                    if not name_match:
+                        continue
+                    field_name = name_match.group(1)
+                    filename_match = re.search(r'filename="([^"]*)"', headers_text)
+                    
+                    if filename_match:
+                        filename = filename_match.group(1)
+                        field = MultipartField(field_name, body_data, filename)
+                    else:
+                        field = MultipartField(field_name, body_data.decode('utf-8', errors='ignore'))
+                    self.fields[field_name] = field
+            except Exception as e:
+                print(f"Multipart parsing error: {e}")
+        
+        def get(self, key, default=None):
+            if key in self.fields:
+                return [self.fields[key]]
+            return default or []
+        
+        def __contains__(self, key):
+            return key in self.fields
+        
+        def __getitem__(self, key):
+            return self.fields[key]
 
 # Import texture service with lazy loading for performance
 def get_texture_service():
@@ -95,18 +154,12 @@ class handler(BaseHTTPRequestHandler):
                 content_length = int(self.headers.get('Content-Length', 0))
                 body = self.rfile.read(content_length)
                 
-                # Parse multipart data
-                environ = {
-                    'REQUEST_METHOD': 'POST',
-                    'CONTENT_TYPE': content_type,
-                    'CONTENT_LENGTH': str(content_length),
-                }
-                
-                form = cgi.FieldStorage(
-                    fp=BytesIO(body),
-                    environ=environ,
-                    keep_blank_values=True
-                )
+                # Parse multipart data using custom parser (Python 3.13+ compatible)
+                try:
+                    from _lib.utils import MultipartParser
+                    form = MultipartParser(body, content_type)
+                except ImportError:
+                    form = MultipartParser(body, content_type)
                 
                 # Get required parameters
                 if 'image' not in form:
@@ -131,8 +184,14 @@ class handler(BaseHTTPRequestHandler):
                 image = validation['image']
                 
                 # Get texture parameters
-                texture_type = form.get('texture_type')[0].value
-                intensity = float(form.get('intensity', ['0.8'])[0].value)
+                texture_type_field = form.get('texture_type')
+                if not texture_type_field:
+                    self._send_error(400, "texture_type parameter required")
+                    return
+                texture_type = texture_type_field[0].value
+                
+                intensity_field = form.get('intensity', [])
+                intensity = float(intensity_field[0].value) if intensity_field else 0.8
                 
                 # Validate texture type (ALL 8 TYPES SUPPORTED)
                 valid_textures = ['lace', 'embroidery', 'silk', 'satin', 'leather', 'velvet', 'mesh', 'sequin']
@@ -147,9 +206,10 @@ class handler(BaseHTTPRequestHandler):
                 
                 # Get optional parameters
                 pantone_colors = []
-                if 'pantone_colors' in form:
+                pantone_colors_field = form.get('pantone_colors', [])
+                if pantone_colors_field:
                     try:
-                        pantone_colors = json.loads(form.get('pantone_colors')[0].value)
+                        pantone_colors = json.loads(pantone_colors_field[0].value)
                     except (json.JSONDecodeError, AttributeError):
                         print("Warning: Invalid pantone_colors JSON, ignoring")
                 
@@ -157,7 +217,7 @@ class handler(BaseHTTPRequestHandler):
                 custom_texture_image = None
                 if 'custom_texture' in form:
                     custom_texture_field = form['custom_texture']
-                    if hasattr(custom_texture_field, 'file'):
+                    if hasattr(custom_texture_field, 'file') and custom_texture_field.file:
                         custom_texture_content = custom_texture_field.file.read()
                         custom_texture_filename = getattr(custom_texture_field, 'filename', 'texture.jpg')
                         
