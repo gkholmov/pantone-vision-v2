@@ -7,37 +7,14 @@
       "use": "@vercel/python",
       "config": {
         "runtime": "python3.12",
-        "maxLambdaSize": "250mb",
-        "excludeFiles": [
-          "**/__pycache__/**",
-          "**/.git/**",
-          "**/venv/**",
-          "**/test_env/**",
-          "**/tests/**",
-          "**/*.pyc",
-          "**/*.pyo",
-          "**/.*",
-          "FIXED_PRODUCTION_SERVER*.py",
-          "PRODUCTION_SERVER.py",
-          "GEMINI_NANO_BANAN_SERVER.py",
-          "start_server.py",
-          "test_*.py",
-          "*.html",
-          "*.png",
-          "*.jpg",
-          "*.jpeg",
-          "uploads/**",
-          "results/**",
-          "static/**",
-          "templates/**"
-        ]
+        "maxLambdaSize": "250mb"
       }
     }
   ],
   "routes": [
     {
       "src": "/",
-      "dest": "/api/health"
+      "dest": "/api/index"
     },
     {
       "src": "/health",
@@ -65,6 +42,11 @@
     }
   ],
   "functions": {
+    "api/index.py": {
+      "runtime": "python3.12",
+      "maxDuration": 10,
+      "memory": 512
+    },
     "api/health.py": {
       "runtime": "python3.12",
       "maxDuration": 10,
@@ -87,7 +69,7 @@
     }
   },
   "env": {
-    "PYTHONPATH": "$PYTHONPATH:/var/task",
+    "PYTHONPATH": "/var/task:/var/task/api",
     "PYTHONDONTWRITEBYTECODE": "1"
   },
   "headers": [

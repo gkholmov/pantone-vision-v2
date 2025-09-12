@@ -1,0 +1,38 @@
+# Ignore test and disabled files
+api/_*.py.disabled
+api/__pycache__
+api/*.pyc
+api/*.pyo
+
+# Ignore all root level Python files that aren't needed
+FIXED_PRODUCTION_SERVER*.py
+PRODUCTION_SERVER.py
+GEMINI_NANO_BANAN_SERVER.py
+pantone_vision_v2_server.py
+start_server.py
+test_*.py
+universal_colorizer.py
+
+# Ignore directories not needed for deployment
+venv/
+test_env/
+products/
+uploads/
+results/
+static/
+templates/
+__pycache__/
+.git/
+.vscode/
+.claude/
+
+# Ignore non-essential files
+*.html
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+.DS_Store
+.gitignore
+README.md
