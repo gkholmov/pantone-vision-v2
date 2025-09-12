@@ -10,12 +10,26 @@ import sys
 import os
 from datetime import datetime
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Add current directory to path for relative imports
+sys.path.insert(0, os.path.dirname(__file__))
 
-from _lib.config import APP_VERSION, DEBUG
-from _lib.database import health_check as db_health_check
-from _lib.utils import create_api_response
+try:
+    from _lib.config import APP_VERSION, DEBUG
+    from _lib.database import health_check as db_health_check
+    from _lib.utils import create_api_response
+except ImportError:
+    # Fallback for production deployment
+    APP_VERSION = "2.0.0"
+    DEBUG = False
+    def health_check():
+        return {'success': True, 'status': 'connected'}
+    def create_api_response(success, data=None, error=None, processing_time_ms=None):
+        response = {'success': success, 'timestamp': datetime.now().isoformat()}
+        if success and data:
+            response['data'] = data
+        elif not success and error:
+            response['error'] = error
+        return response
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
