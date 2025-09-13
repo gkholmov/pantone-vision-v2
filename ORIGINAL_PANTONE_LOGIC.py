@@ -364,6 +364,7 @@ Respond with JSON:
                     results.append({
                         'pantone_code': match.get('pantone_code', 'Unknown'),
                         'pantone_name': match.get('name', 'Unknown Color'),
+                        'name': match.get('name', 'Unknown Color'),  # Add 'name' for frontend compatibility
                         'rgb': list(rgb),
                         'hex': f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
                         'confidence': match.get('confidence', 0.5),

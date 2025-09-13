@@ -263,6 +263,7 @@ class handler(BaseHTTPRequestHandler):
     <script>
         let selectedTexture = null;
         let selectedImages = {};
+        let selectedPantoneColor = null;
         
         // Tab switching
         function switchTab(tab) {
@@ -380,16 +381,40 @@ class handler(BaseHTTPRequestHandler):
         
         function displayPantoneColors(colors) {
             const container = document.getElementById('pantone-results');
-            container.innerHTML = colors.map(color => `
-                <div class="flex items-center gap-4 p-3 bg-white rounded-lg shadow pantone-color cursor-pointer">
+            container.innerHTML = colors.map((color, index) => `
+                <div class="flex items-center gap-4 p-3 bg-white rounded-lg shadow pantone-color cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all"
+                     onclick="selectPantoneColor(${index}, '${color.pantone_code}', '${color.name || 'Color ' + (index + 1)}', '${color.hex || '#000000'}')">
                     <div class="w-16 h-16 rounded-lg shadow-inner" style="background-color: ${color.hex || color.rgb}"></div>
                     <div class="flex-1">
-                        <p class="font-semibold">${color.name || 'Color ' + (colors.indexOf(color) + 1)}</p>
+                        <p class="font-semibold">${color.name || 'Color ' + (index + 1)}</p>
                         <p class="text-sm text-gray-500">${color.pantone_code || color.hex || 'RGB: ' + color.rgb}</p>
                         ${color.confidence ? '<p class="text-xs text-gray-400">Confidence: ' + (color.confidence * 100).toFixed(1) + '%</p>' : ''}
                     </div>
                 </div>
             `).join('');
+            
+            // Store colors globally for reference
+            window.detectedPantoneColors = colors;
+        }
+        
+        function selectPantoneColor(index, code, name, hex) {
+            selectedPantoneColor = {
+                code: code,
+                name: name,
+                hex: hex,
+                index: index
+            };
+            
+            // Update UI to show selection
+            document.querySelectorAll('.pantone-color').forEach((el, i) => {
+                if (i === index) {
+                    el.classList.add('ring-2', 'ring-purple-500', 'bg-purple-50');
+                } else {
+                    el.classList.remove('ring-2', 'ring-purple-500', 'bg-purple-50');
+                }
+            });
+            
+            showStatus(`Selected: ${name} (${code})`, 'success');
         }
         
         // Texture application
@@ -405,6 +430,13 @@ class handler(BaseHTTPRequestHandler):
             formData.append('image', selectedImages.texture);
             formData.append('texture_type', selectedTexture);
             formData.append('intensity', document.getElementById('texture-intensity').value / 100);
+            
+            // Add selected Pantone color if available
+            if (selectedPantoneColor) {
+                formData.append('pantone_color', selectedPantoneColor.code);
+                formData.append('pantone_name', selectedPantoneColor.name);
+                formData.append('pantone_hex', selectedPantoneColor.hex);
+            }
             
             try {
                 const response = await fetch('/api/texture', {
