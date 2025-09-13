@@ -33,27 +33,22 @@
   ],
   "functions": {
     "api/index.py": {
-      "runtime": "python3.12",
       "maxDuration": 10,
       "memory": 512
     },
     "api/health.py": {
-      "runtime": "python3.12",
       "maxDuration": 10,
       "memory": 512
     },
     "api/pantone.py": {
-      "runtime": "python3.12", 
       "maxDuration": 60,
       "memory": 1024
     },
     "api/texture.py": {
-      "runtime": "python3.12",
       "maxDuration": 300,
       "memory": 3008
     },
     "api/gemini.py": {
-      "runtime": "python3.12",
       "maxDuration": 300,
       "memory": 3008
     }
