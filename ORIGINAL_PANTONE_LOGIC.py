@@ -221,6 +221,89 @@ Respond with JSON:
             'recommendation': 'Configure ANTHROPIC_API_KEY for full AI-powered color identification'
         }
     
+    def identify_colors_from_image(self, image):
+        """
+        Main entry point for Pantone color identification from PIL Image
+        Returns multiple detected colors with their Pantone matches
+        """
+        try:
+            # Convert PIL Image to numpy array
+            if hasattr(image, 'convert'):
+                image = image.convert('RGB')
+                image_array = np.array(image)
+            else:
+                image_array = image
+            
+            # Extract multiple colors using different methods
+            colors_to_analyze = []
+            
+            # 1. Dominant color
+            dominant_rgb = self.analyze_image_color(image_array, method="dominant")
+            colors_to_analyze.append(('dominant', dominant_rgb))
+            
+            # 2. Center color
+            center_rgb = self.analyze_image_color(image_array, method="center")
+            if center_rgb != dominant_rgb:
+                colors_to_analyze.append(('center', center_rgb))
+            
+            # 3. Sample grid colors (3x3 grid)
+            h, w = image_array.shape[:2]
+            grid_colors = []
+            for i in range(3):
+                for j in range(3):
+                    y_start = i * h // 3
+                    y_end = (i + 1) * h // 3
+                    x_start = j * w // 3
+                    x_end = (j + 1) * w // 3
+                    region = image_array[y_start:y_end, x_start:x_end]
+                    region_color = tuple(int(x) for x in np.mean(region.reshape(-1, 3), axis=0))
+                    if region_color not in [dominant_rgb, center_rgb] and region_color not in grid_colors:
+                        grid_colors.append(region_color)
+            
+            # Add up to 3 unique grid colors
+            for idx, color in enumerate(grid_colors[:3]):
+                colors_to_analyze.append((f'region_{idx+1}', color))
+            
+            # Analyze each color with AI
+            results = []
+            for method_name, rgb in colors_to_analyze[:5]:  # Limit to 5 colors
+                color_result = self.identify_color_with_ai(rgb, f"Extracted using {method_name} method")
+                
+                if 'primary_match' in color_result:
+                    match = color_result['primary_match']
+                    results.append({
+                        'pantone_code': match.get('pantone_code', 'Unknown'),
+                        'pantone_name': match.get('name', 'Unknown Color'),
+                        'rgb': list(rgb),
+                        'hex': f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
+                        'confidence': match.get('confidence', 0.5),
+                        'category': match.get('category', 'Unknown'),
+                        'extraction_method': method_name,
+                        'delta_e': match.get('delta_e_estimated', 0),
+                        'collection': match.get('collection', 'N/A'),
+                        'alternatives': color_result.get('alternative_matches', []),
+                        'color_analysis': color_result.get('color_analysis', {}),
+                        'preview_css': f"background: linear-gradient(135deg, rgb{rgb}, rgb({max(0,rgb[0]-20)},{max(0,rgb[1]-20)},{max(0,rgb[2]-20)}))"
+                    })
+            
+            return {
+                'success': True,
+                'colors': results,
+                'image_info': {
+                    'size': image.size if hasattr(image, 'size') else image_array.shape[:2],
+                    'mode': image.mode if hasattr(image, 'mode') else 'RGB',
+                    'colors_detected': len(results)
+                },
+                'confidence': np.mean([c['confidence'] for c in results]) if results else 0
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'colors': []
+            }
+    
     def analyze_image_color(self, image_array: np.ndarray, method: str = "dominant") -> Tuple[int, int, int]:
         """
         Extract representative color from image

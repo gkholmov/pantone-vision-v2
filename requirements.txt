@@ -4,12 +4,18 @@
 # Core Image Processing (REQUIRED) ~30MB
 Pillow==10.1.0
 
+# Numerical operations for color analysis ~15MB
+numpy==1.26.0
+
 # HTTP Client for all API calls ~5MB
 requests==2.31.0
 
 # Environment variables ~1MB
 python-dotenv==1.0.0
 
-# TOTAL: ~36MB (well under 250MB limit)
+# AI SDK for Pantone color matching ~2MB
+anthropic==0.39.0
+
+# TOTAL: ~53MB (well under 250MB limit)
 # All API functionality works via HTTP requests
-# No heavy SDKs needed - our code handles the API calls
+# Includes full Pantone AI matching capabilities
