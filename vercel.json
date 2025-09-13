@@ -33,24 +33,19 @@
   ],
   "functions": {
     "api/index.py": {
-      "maxDuration": 10,
-      "memory": 512
+      "maxDuration": 10
     },
     "api/health.py": {
-      "maxDuration": 10,
-      "memory": 512
+      "maxDuration": 10
     },
     "api/pantone.py": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     },
     "api/texture.py": {
-      "maxDuration": 300,
-      "memory": 3008
+      "maxDuration": 300
     },
     "api/gemini.py": {
-      "maxDuration": 300,
-      "memory": 3008
+      "maxDuration": 300
     }
   },
   "regions": ["iad1"]

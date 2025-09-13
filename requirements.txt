@@ -1,35 +1,15 @@
-# Production Requirements - Optimized for Vercel
-# Full functionality with size optimization
+# Minimal Production Requirements - Under 250MB for Vercel
+# API calls work via requests, no heavy SDKs needed
 
-# Core Image Processing (REQUIRED)
+# Core Image Processing (REQUIRED) ~30MB
 Pillow==10.1.0
-numpy==1.26.4
 
-# AI/ML API Clients (REQUIRED for all features)
-google-generativeai==0.7.2
-anthropic==0.34.2
-huggingface-hub==0.24.5
-
-# Database (REQUIRED for persistence)
-supabase==2.7.4
-
-# HTTP and API Support
+# HTTP Client for all API calls ~5MB
 requests==2.31.0
-httpx==0.25.2
 
-# Scientific Computing (REQUIRED for texture processing)
-scipy==1.13.1
-
-# Color Science (REQUIRED for Pantone matching)
-colorspacious==1.1.2
-
-# Utilities
+# Environment variables ~1MB
 python-dotenv==1.0.0
-python-dateutil==2.8.2
-python-multipart==0.0.6
 
-# JSON Handling
-pydantic==2.5.3
-
-# Basic Computer Vision (lightweight alternative to OpenCV)
-scikit-image==0.24.0
+# TOTAL: ~36MB (well under 250MB limit)
+# All API functionality works via HTTP requests
+# No heavy SDKs needed - our code handles the API calls
