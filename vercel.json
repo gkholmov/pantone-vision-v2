@@ -1,16 +1,6 @@
 {
   "version": 2,
   "name": "pantone-vision-v2",
-  "builds": [
-    {
-      "src": "api/*.py",
-      "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.12",
-        "maxLambdaSize": "250mb"
-      }
-    }
-  ],
   "routes": [
     {
       "src": "/",
