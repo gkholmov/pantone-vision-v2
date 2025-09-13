@@ -1,11 +1,35 @@
-# Minimal requirements for Vercel Python serverless functions
-# Only essential packages that are actually imported and used
+# Production Requirements - Optimized for Vercel
+# Full functionality with size optimization
 
-# Image Processing (required for all endpoints)
+# Core Image Processing (REQUIRED)
 Pillow==10.1.0
+numpy==1.26.4
 
-# Basic HTTP requests (for API calls)
+# AI/ML API Clients (REQUIRED for all features)
+google-generativeai==0.7.2
+anthropic==0.34.2
+huggingface-hub==0.24.5
+
+# Database (REQUIRED for persistence)
+supabase==2.7.4
+
+# HTTP and API Support
 requests==2.31.0
+httpx==0.25.2
 
-# Environment variables
+# Scientific Computing (REQUIRED for texture processing)
+scipy==1.13.1
+
+# Color Science (REQUIRED for Pantone matching)
+colorspacious==1.1.2
+
+# Utilities
 python-dotenv==1.0.0
+python-dateutil==2.8.2
+python-multipart==0.0.6
+
+# JSON Handling
+pydantic==2.5.3
+
+# Basic Computer Vision (lightweight alternative to OpenCV)
+scikit-image==0.24.0
