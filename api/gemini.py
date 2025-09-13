@@ -312,9 +312,68 @@ class handler(BaseHTTPRequestHandler):
                 
                 # Parse multipart data using custom parser (Python 3.13+ compatible)
                 try:
-                    from _lib.utils import MultipartParser
-                    form = MultipartParser(body, content_type)
+                    from _lib.utils import MultipartParser as MP
+                    form = MP(body, content_type)
                 except ImportError:
+                    # Define MultipartParser inline if not available
+                    import re
+                    
+                    class MultipartField:
+                        def __init__(self, name, value=None, filename=None):
+                            self.name = name
+                            self.value = value
+                            self.filename = filename
+                            self.file = None
+                            if isinstance(value, bytes):
+                                self.file = BytesIO(value)
+                    
+                    class MultipartParser:
+                        def __init__(self, body, content_type):
+                            self.fields = {}
+                            self._parse(body, content_type)
+                        
+                        def _parse(self, body, content_type):
+                            try:
+                                boundary_match = re.search(r'boundary=([^;]+)', content_type)
+                                if not boundary_match:
+                                    return
+                                boundary = boundary_match.group(1).strip('"')
+                                boundary_bytes = ('--' + boundary).encode()
+                                parts = body.split(boundary_bytes)
+                                
+                                for part in parts[1:-1]:
+                                    if not part.strip():
+                                        continue
+                                    if b'\r\n\r\n' not in part:
+                                        continue
+                                    headers_data, body_data = part.split(b'\r\n\r\n', 1)
+                                    headers_text = headers_data.decode('utf-8', errors='ignore')
+                                    name_match = re.search(r'name="([^"]*)"', headers_text)
+                                    if not name_match:
+                                        continue
+                                    field_name = name_match.group(1)
+                                    filename_match = re.search(r'filename="([^"]*)"', headers_text)
+                                    
+                                    if filename_match:
+                                        filename = filename_match.group(1)
+                                        field = MultipartField(field_name, body_data, filename)
+                                    else:
+                                        field = MultipartField(field_name, body_data.decode('utf-8', errors='ignore'))
+                                    self.fields[field_name] = field
+                            except Exception as e:
+                                print(f"Multipart parsing error: {e}")
+                        
+                        def get(self, key, default=None):
+                            if key in self.fields:
+                                return [self.fields[key]]
+                            return default or []
+                        
+                        def __contains__(self, key):
+                            return key in self.fields
+                        
+                        def __getitem__(self, key):
+                            return self.fields[key]
+                    
                     form = MultipartParser(body, content_type)
                 
                 # Get required images
