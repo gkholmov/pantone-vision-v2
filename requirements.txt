@@ -1,27 +1,11 @@
-# Pantone Vision V2 - Optimized Requirements for Vercel Serverless
-# Python 3.12 compatible versions - optimized for <250MB limit
+# Minimal requirements for Vercel Python serverless functions
+# Only essential packages that are actually imported and used
 
-# Core Web Framework (minimal)
-fastapi==0.104.1
-python-multipart==0.0.6
-
-# Essential Image Processing (lightweight versions)
+# Image Processing (required for all endpoints)
 Pillow==10.1.0
-numpy==1.24.4
 
-# AI/ML APIs (core only)
-google-generativeai==0.7.2
+# Basic HTTP requests (for API calls)
 requests==2.31.0
 
-# Database (lightweight client)
-supabase==2.7.4
+# Environment variables
 python-dotenv==1.0.0
-
-# Scientific Computing (optional - only if needed)
-# scipy==1.11.4  # Commented out - too large, use fallbacks
-
-# Minimal HTTP Client  
-httpx==0.25.2
-
-# Required utilities (minimal)
-python-dateutil==2.8.2
