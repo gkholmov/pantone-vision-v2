@@ -13,12 +13,13 @@ requests==2.31.0
 # Environment variables ~1MB
 python-dotenv==1.0.0
 
-# AI SDK for Pantone color matching ~2MB
-anthropic==0.39.0
+# AI SDK for Pantone color matching ~10MB total
+anthropic==0.66.0
+httpx  # Required by anthropic
 
-# Google AI SDK for Gemini (optional, will use fallback if not available)
-# google-generativeai==0.8.3
+# Google AI SDK for Gemini (REQUIRED) ~15MB
+google-genai
 
-# TOTAL: ~53MB (well under 250MB limit)
-# All API functionality works via HTTP requests
-# Includes full Pantone AI matching capabilities
+# TOTAL: ~75MB (well under 250MB limit)
+# Both Anthropic and Google GenAI SDKs included
+# Full AI-powered functionality for production

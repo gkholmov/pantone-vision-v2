@@ -136,9 +136,9 @@ def get_gemini_client():
     """Lazy load Gemini client to reduce cold start time"""
     try:
         from google import genai
-        # Set API key
-        os.environ['GOOGLE_API_KEY'] = GEMINI_API_KEY
-        return genai.Client()
+        # Create client with API key
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        return client
     except ImportError as e:
         print(f"Warning: Gemini import failed: {e}")
         # Return a simple HTTP-based client instead
