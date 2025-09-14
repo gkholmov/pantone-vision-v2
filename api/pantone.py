@@ -130,7 +130,7 @@ except ImportError:
     # Fallback implementation if original not available
     print("Warning: ORIGINAL_PANTONE_LOGIC not found, using fallback")
     class UniversalColorMatcher:
-        def identify_colors_from_image(self, image):
+        def identify_colors_from_image(self, image, max_colors=5):
             return {"colors": [], "error": "Original Pantone logic not available"}
 
 class handler(BaseHTTPRequestHandler):
@@ -242,16 +242,16 @@ class handler(BaseHTTPRequestHandler):
                 # Prepare image for processing
                 processed_image = prepare_image_for_processing(image)
                 
-                # Perform Pantone color matching
-                color_matcher = UniversalColorMatcher()
-                color_results = color_matcher.identify_colors_from_image(processed_image)
-                
                 # Get additional parameters
                 include_metadata_field = form.get('include_metadata', [])
                 include_metadata = include_metadata_field[0].value.lower() == 'true' if include_metadata_field else False
                 
                 max_colors_field = form.get('max_colors', [])
-                max_colors = int(max_colors_field[0].value) if max_colors_field else 10
+                max_colors = int(max_colors_field[0].value) if max_colors_field else 5
+                
+                # Perform Pantone color matching with max_colors parameter
+                color_matcher = UniversalColorMatcher()
+                color_results = color_matcher.identify_colors_from_image(processed_image, max_colors=max_colors)
                 
                 # Prepare response data
                 response_data = {

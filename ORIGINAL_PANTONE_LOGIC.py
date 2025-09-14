@@ -445,7 +445,7 @@ Respond with JSON:
             }
         }
     
-    def identify_colors_from_image(self, image):
+    def identify_colors_from_image(self, image, max_colors=5):
         """
         Main entry point for Pantone color identification from PIL Image
         Returns multiple detected colors with their Pantone matches
