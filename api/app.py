@@ -289,6 +289,26 @@ class handler(BaseHTTPRequestHandler):
                     preview.src = e.target.result;
                     preview.classList.remove('hidden');
                     selectedImages[type] = input.files[0];
+                    
+                    // If uploading Pantone image, also set it for texture tab
+                    if (type === 'pantone') {
+                        selectedImages['texture'] = input.files[0];
+                        // Update texture preview
+                        const texturePreview = document.getElementById('texture-preview');
+                        if (texturePreview) {
+                            texturePreview.src = e.target.result;
+                            texturePreview.classList.remove('hidden');
+                        }
+                        // Update texture upload label to show image is loaded
+                        const textureLabel = document.querySelector('label[for="texture-image"]');
+                        if (textureLabel) {
+                            const uploadText = textureLabel.querySelector('p');
+                            if (uploadText) {
+                                uploadText.textContent = 'Image loaded from Pantone analysis';
+                                uploadText.classList.add('text-green-600', 'font-semibold');
+                            }
+                        }
+                    }
                 };
                 reader.readAsDataURL(input.files[0]);
             }
@@ -370,7 +390,12 @@ class handler(BaseHTTPRequestHandler):
                 
                 if (result.success) {
                     displayPantoneColors(result.data.colors);
-                    showStatus('Colors identified successfully!', 'success');
+                    showStatus('Colors identified! Select a color, then switch to Texture tab.', 'success');
+                    
+                    // Highlight that image is ready for texture
+                    setTimeout(() => {
+                        showStatus('💡 Image automatically loaded in Texture tab', 'info');
+                    }, 2000);
                 } else {
                     showStatus('Error: ' + result.error, 'error');
                 }
