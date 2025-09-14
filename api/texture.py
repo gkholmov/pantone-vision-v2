@@ -12,6 +12,7 @@ import os
 from datetime import datetime
 import base64
 from io import BytesIO
+from PIL import Image
 # cgi module removed in Python 3.13+, using custom multipart parser
 
 # Add current directory to path for relative imports
@@ -126,6 +127,126 @@ except ImportError:
         def __getitem__(self, key):
             return self.fields[key]
 
+# Fallback texture service for when main service is unavailable
+class FallbackTextureService:
+    """Simple texture service that works without external dependencies"""
+    
+    def __init__(self):
+        self.texture_patterns = {
+            'lace': {'pattern': 'crosshatch', 'opacity': 0.3, 'blend': 'overlay'},
+            'embroidery': {'pattern': 'dots', 'opacity': 0.4, 'blend': 'multiply'},
+            'silk': {'pattern': 'gradient', 'opacity': 0.2, 'blend': 'screen'},
+            'satin': {'pattern': 'shine', 'opacity': 0.25, 'blend': 'soft-light'},
+            'leather': {'pattern': 'grain', 'opacity': 0.35, 'blend': 'multiply'},
+            'velvet': {'pattern': 'soft', 'opacity': 0.3, 'blend': 'darken'},
+            'mesh': {'pattern': 'grid', 'opacity': 0.4, 'blend': 'multiply'},
+            'sequin': {'pattern': 'sparkle', 'opacity': 0.5, 'blend': 'screen'}
+        }
+    
+    def process_full_texture_workflow(self, image, texture_type, pantone_colors=None, intensity=0.8):
+        """Apply texture effect using PIL filters"""
+        from PIL import ImageFilter, ImageEnhance, ImageOps
+        import random
+        
+        # Apply texture-specific filters
+        if texture_type == 'lace':
+            # Add delicate pattern
+            image = image.filter(ImageFilter.DETAIL)
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(1.2)
+        elif texture_type == 'embroidery':
+            # Add raised texture effect
+            image = image.filter(ImageFilter.EMBOSS)
+            image = Image.blend(image, image.filter(ImageFilter.EDGE_ENHANCE), 0.3)
+        elif texture_type == 'silk':
+            # Add smooth, lustrous effect
+            image = image.filter(ImageFilter.SMOOTH_MORE)
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(1.1)
+        elif texture_type == 'satin':
+            # Add glossy effect
+            image = image.filter(ImageFilter.GaussianBlur(radius=1))
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(1.3)
+        elif texture_type == 'leather':
+            # Add grain texture
+            image = image.filter(ImageFilter.SHARPEN)
+            image = image.filter(ImageFilter.EDGE_ENHANCE_MORE)
+        elif texture_type == 'velvet':
+            # Add soft, plush effect
+            image = image.filter(ImageFilter.SMOOTH)
+            enhancer = ImageEnhance.Color(image)
+            image = enhancer.enhance(1.2)
+        elif texture_type == 'mesh':
+            # Add perforated pattern
+            image = image.filter(ImageFilter.FIND_EDGES)
+            image = ImageOps.autocontrast(image)
+        elif texture_type == 'sequin':
+            # Add sparkle effect
+            image = image.filter(ImageFilter.MaxFilter(size=3))
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(1.2)
+        
+        # Apply intensity adjustment
+        if intensity < 1.0:
+            original = image.copy()
+            image = Image.blend(original, image, intensity)
+        
+        # Apply Pantone color tinting if provided
+        if pantone_colors and len(pantone_colors) > 0:
+            # Apply subtle color overlay based on first Pantone color
+            if 'hex' in pantone_colors[0]:
+                hex_color = pantone_colors[0]['hex'].lstrip('#')
+                rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+                overlay = Image.new('RGB', image.size, rgb)
+                image = Image.blend(image, overlay, 0.15)  # Subtle tint
+        
+        # Convert to base64 for response
+        buffer = BytesIO()
+        image.save(buffer, format='PNG', quality=95)
+        textured_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return {
+            'success': True,
+            'textured_image': f"data:image/png;base64,{textured_base64}",
+            'texture_applied': texture_type,
+            'method': 'PIL_Fallback',
+            'intensity': intensity
+        }
+    
+    def apply_custom_texture(self, image, custom_texture, pantone_colors=None, intensity=0.8):
+        """Apply custom texture using simple blending"""
+        # Resize custom texture to match image size
+        custom_texture = custom_texture.resize(image.size, Image.LANCZOS)
+        
+        # Blend the textures
+        textured = Image.blend(image, custom_texture, intensity * 0.5)
+        
+        # Convert to base64
+        buffer = BytesIO()
+        textured.save(buffer, format='PNG', quality=95)
+        textured_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return {
+            'success': True,
+            'textured_image': f"data:image/png;base64,{textured_base64}",
+            'texture_applied': 'custom',
+            'method': 'PIL_Fallback',
+            'intensity': intensity
+        }
+    
+    def get_available_textures(self):
+        """Return list of available textures"""
+        return {
+            'textures': list(self.texture_patterns.keys()),
+            'total_available': len(self.texture_patterns),
+            'categories': {
+                'delicate': ['lace', 'silk', 'mesh'],
+                'luxury': ['velvet', 'satin', 'leather'],
+                'decorative': ['embroidery', 'sequin']
+            }
+        }
+
 # Import texture service with lazy loading for performance
 def get_texture_service():
     """Lazy load texture service to reduce cold start time"""
@@ -133,8 +254,9 @@ def get_texture_service():
         from services.texture_application_service import TextureApplicationService
         return TextureApplicationService()
     except ImportError as e:
-        print(f"Warning: Texture service import failed: {e}")
-        return None
+        print(f"Warning: Texture service import failed: {e}, using fallback")
+        # Return a simple fallback texture service
+        return FallbackTextureService()
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
