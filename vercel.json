@@ -50,7 +50,7 @@
       "maxDuration": 10
     },
     "api/pantone.py": {
-      "maxDuration": 60
+      "maxDuration": 300
     },
     "api/texture.py": {
       "maxDuration": 300

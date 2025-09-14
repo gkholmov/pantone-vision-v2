@@ -132,7 +132,7 @@ class handler(BaseHTTPRequestHandler):
                                 <p class="text-sm text-gray-600 mt-2">Upload textile</p>
                             </label>
                         </div>
-                        <img id="gemini-textile-preview" class="mt-4 rounded-xl shadow-lg hidden">
+                        <img id="gemini-textile-preview" class="mt-4 rounded-xl shadow-lg hidden" style="max-height: 400px; width: 100%; object-fit: contain;">
                     </div>
                     
                     <div>
@@ -144,7 +144,7 @@ class handler(BaseHTTPRequestHandler):
                                 <p class="text-sm text-gray-600 mt-2">Upload sketch</p>
                             </label>
                         </div>
-                        <img id="gemini-sketch-preview" class="mt-4 rounded-xl shadow-lg hidden">
+                        <img id="gemini-sketch-preview" class="mt-4 rounded-xl shadow-lg hidden" style="max-height: 400px; width: 100%; object-fit: contain;">
                     </div>
                     
                     <div>
