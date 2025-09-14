@@ -53,6 +53,112 @@ class UniversalColorMatcher:
         
         return (L, a, b)
     
+    def _batch_identify_colors_with_ai(self, colors_list):
+        """Batch identify multiple colors with a single AI call for speed"""
+        try:
+            from anthropic import Anthropic
+            client = Anthropic(api_key=self.api_key)
+            
+            # Build color information for all colors
+            colors_info = []
+            for idx, (method_name, rgb) in enumerate(colors_list):
+                hex_color = f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}"
+                lab = self.rgb_to_lab(rgb)
+                colors_info.append({
+                    'index': idx,
+                    'method': method_name,
+                    'rgb': rgb,
+                    'hex': hex_color,
+                    'lab': lab
+                })
+            
+            # Create batch prompt
+            prompt = f"""Analyze these {len(colors_info)} colors and match each to the most accurate Pantone color.
+
+Colors to analyze:
+"""
+            for color in colors_info:
+                prompt += f"\nColor {color['index']+1}: RGB{color['rgb']}, Hex: {color['hex']}, LAB: {[round(x,1) for x in color['lab']]}"
+            
+            prompt += """
+
+Return a JSON array with one object per color containing:
+- index: the color index (0-based)
+- pantone_code: exact Pantone code (e.g., "PANTONE 18-1142 TPX")
+- name: official Pantone name
+- confidence: accuracy score (0.0-1.0)
+- category: color category
+- collection: Pantone collection (TPX, TCX, C, etc.)
+- delta_e_estimated: estimated Delta E value
+
+Return ONLY the JSON array, no other text."""
+
+            message = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            response_text = message.content[0].text
+            print(f"Batch Claude API response (first 300 chars): {response_text[:300]}")
+            
+            # Parse JSON response
+            if '```json' in response_text:
+                json_start = response_text.find('```json') + 7
+                json_end = response_text.find('```', json_start)
+                json_str = response_text[json_start:json_end].strip()
+            else:
+                json_start = response_text.find('[')
+                json_end = response_text.rfind(']') + 1
+                json_str = response_text[json_start:json_end]
+            
+            ai_results = json.loads(json_str)
+            
+            # Build final results
+            results = []
+            for ai_match in ai_results:
+                idx = ai_match['index']
+                method_name, rgb = colors_list[idx]
+                
+                results.append({
+                    'pantone_code': ai_match.get('pantone_code', 'Unknown'),
+                    'pantone_name': ai_match.get('name', 'Unknown Color'),
+                    'name': ai_match.get('name', 'Unknown Color'),
+                    'rgb': list(rgb),
+                    'hex': f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
+                    'confidence': ai_match.get('confidence', 0.5),
+                    'category': ai_match.get('category', 'Unknown'),
+                    'extraction_method': method_name,
+                    'delta_e': ai_match.get('delta_e_estimated', 0),
+                    'collection': ai_match.get('collection', 'N/A'),
+                    'preview_css': f"background: linear-gradient(135deg, rgb{rgb}, rgb({max(0,rgb[0]-20)},{max(0,rgb[1]-20)},{max(0,rgb[2]-20)}))"
+                })
+            
+            return results
+            
+        except Exception as e:
+            print(f"Batch AI identification error: {e}")
+            # Fallback to individual analysis if batch fails
+            results = []
+            for method_name, rgb in colors_list:
+                color_result = self.identify_color_with_ai(rgb, f"Extracted using {method_name} method")
+                if 'primary_match' in color_result:
+                    match = color_result['primary_match']
+                    results.append({
+                        'pantone_code': match.get('pantone_code', 'Unknown'),
+                        'pantone_name': match.get('name', 'Unknown Color'),
+                        'name': match.get('name', 'Unknown Color'),
+                        'rgb': list(rgb),
+                        'hex': f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
+                        'confidence': match.get('confidence', 0.5),
+                        'category': match.get('category', 'Unknown'),
+                        'extraction_method': method_name,
+                        'delta_e': match.get('delta_e_estimated', 0),
+                        'collection': match.get('collection', 'N/A'),
+                        'preview_css': f"background: linear-gradient(135deg, rgb{rgb}, rgb({max(0,rgb[0]-20)},{max(0,rgb[1]-20)},{max(0,rgb[2]-20)}))"
+                    })
+            return results
+    
     def identify_color_with_ai(self, rgb: Tuple[int, int, int], image_description: str = None) -> Dict:
         """
         Use Claude AI to intelligently identify ANY color
@@ -382,28 +488,20 @@ Respond with JSON:
             for idx, color in enumerate(grid_colors[:3]):
                 colors_to_analyze.append((f'region_{idx+1}', color))
             
-            # Analyze each color with AI
-            results = []
-            for method_name, rgb in colors_to_analyze[:5]:  # Limit to 5 colors
-                color_result = self.identify_color_with_ai(rgb, f"Extracted using {method_name} method")
-                
-                if 'primary_match' in color_result:
-                    match = color_result['primary_match']
-                    results.append({
-                        'pantone_code': match.get('pantone_code', 'Unknown'),
-                        'pantone_name': match.get('name', 'Unknown Color'),
-                        'name': match.get('name', 'Unknown Color'),  # Add 'name' for frontend compatibility
-                        'rgb': list(rgb),
-                        'hex': f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
-                        'confidence': match.get('confidence', 0.5),
-                        'category': match.get('category', 'Unknown'),
-                        'extraction_method': method_name,
-                        'delta_e': match.get('delta_e_estimated', 0),
-                        'collection': match.get('collection', 'N/A'),
-                        'alternatives': color_result.get('alternative_matches', []),
-                        'color_analysis': color_result.get('color_analysis', {}),
-                        'preview_css': f"background: linear-gradient(135deg, rgb{rgb}, rgb({max(0,rgb[0]-20)},{max(0,rgb[1]-20)},{max(0,rgb[2]-20)}))"
-                    })
+            # Batch analyze all colors with a single AI call for speed
+            colors_for_ai = colors_to_analyze[:max_colors]  # Limit to max_colors
+            results = self._batch_identify_colors_with_ai(colors_for_ai)
+            
+            # Ensure consistent names for duplicate Pantone codes
+            pantone_name_map = {}
+            for result in results:
+                code = result['pantone_code']
+                if code not in pantone_name_map:
+                    pantone_name_map[code] = result['name']
+                else:
+                    # Use the first name encountered for consistency
+                    result['name'] = pantone_name_map[code]
+                    result['pantone_name'] = pantone_name_map[code]
             
             return {
                 'success': True,
