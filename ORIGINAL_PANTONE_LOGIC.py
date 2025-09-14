@@ -144,15 +144,30 @@ Respond with JSON:
                     print(f"Error in Claude response: {response_text}")
                     return self._fallback_color_analysis(rgb, error=f"Claude API error: {response_text[:100]}")
                 
-                # Extract JSON from response
-                json_start = response_text.find('{')
-                json_end = response_text.rfind('}') + 1
-                if json_start >= 0 and json_end > json_start:
-                    json_str = response_text[json_start:json_end]
-                    print(f"Attempting to parse JSON: {json_str[:200]}...")
-                    ai_analysis = json.loads(json_str)
+                # Handle markdown code blocks (```json ... ```)
+                if '```json' in response_text:
+                    json_start = response_text.find('```json') + 7
+                    json_end = response_text.find('```', json_start)
+                    if json_end > json_start:
+                        json_str = response_text[json_start:json_end].strip()
+                        print(f"Extracted JSON from markdown: {json_str[:200]}...")
+                        ai_analysis = json.loads(json_str)
+                    else:
+                        # Fallback to bracket extraction
+                        json_start = response_text.find('{')
+                        json_end = response_text.rfind('}') + 1
+                        json_str = response_text[json_start:json_end]
+                        ai_analysis = json.loads(json_str)
                 else:
-                    ai_analysis = json.loads(response_text)
+                    # Extract JSON from response
+                    json_start = response_text.find('{')
+                    json_end = response_text.rfind('}') + 1
+                    if json_start >= 0 and json_end > json_start:
+                        json_str = response_text[json_start:json_end]
+                        print(f"Attempting to parse JSON: {json_str[:200]}...")
+                        ai_analysis = json.loads(json_str)
+                    else:
+                        ai_analysis = json.loads(response_text)
                 
                 # Add technical data
                 ai_analysis['technical_data'] = {

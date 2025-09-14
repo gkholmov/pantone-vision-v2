@@ -64,11 +64,6 @@ class handler(BaseHTTPRequestHandler):
         <div class="glass-morphism rounded-2xl p-8 mb-8 shadow-2xl">
             <h1 class="text-5xl font-bold text-gray-800 mb-4">Pantone Vision V2</h1>
             <p class="text-xl text-gray-600">Professional Color Matching & Textile Pattern Transfer System</p>
-            <div class="flex gap-4 mt-6">
-                <span class="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">✓ 8 Texture Types</span>
-                <span class="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">✓ Gemini AI</span>
-                <span class="px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">✓ Pantone Matching</span>
-            </div>
         </div>
 
         <!-- Main Tabs -->
@@ -103,11 +98,11 @@ class handler(BaseHTTPRequestHandler):
                         </div>
                         <img id="pantone-preview" class="mt-4 rounded-xl shadow-lg hidden max-h-64 mx-auto">
                         
-                        <div class="mt-6 flex gap-4">
-                            <button onclick="analyzePantone()" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transition-all">
+                        <div class="mt-6">
+                            <button onclick="analyzePantone()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transition-all">
                                 Analyze Colors
                             </button>
-                            <input type="number" id="max-colors" placeholder="Max colors" value="10" min="1" max="50" class="w-32 px-4 py-3 border rounded-xl">
+                            <input type="hidden" id="max-colors" value="5">
                         </div>
                     </div>
                     
@@ -125,7 +120,7 @@ class handler(BaseHTTPRequestHandler):
         <!-- Gemini Pattern Transfer Section -->
         <div id="section-gemini" class="section hidden">
             <div class="glass-morphism rounded-2xl p-8 shadow-2xl">
-                <h2 class="text-3xl font-bold mb-6 text-gray-800">Gemini AI Pattern Transfer</h2>
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">AI Pattern Transfer</h2>
                 
                 <div class="grid md:grid-cols-3 gap-6">
                     <div>
