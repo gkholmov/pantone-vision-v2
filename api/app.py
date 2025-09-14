@@ -290,7 +290,14 @@ class handler(BaseHTTPRequestHandler):
                     body: formData
                 });
                 
-                const result = await response.json();
+                let result;
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    const text = await response.text();
+                    console.error('Invalid JSON response:', text);
+                    throw new Error('Invalid response format from server');
+                }
                 
                 if (result.success) {
                     displayPantoneColors(result.data.colors);
@@ -432,8 +439,8 @@ class handler(BaseHTTPRequestHandler):
         function displayGeminiResult(imageData) {
             const container = document.getElementById('gemini-result');
             container.innerHTML = `
-                <div>
-                    <img src="${imageData}" class="max-w-full rounded-xl shadow-lg mb-4">
+                <div class="flex flex-col items-center">
+                    <img src="${imageData}" class="max-w-md w-full rounded-xl shadow-lg mb-4" style="max-height: 400px; object-fit: contain;">
                     <p class="text-sm text-gray-600 text-center">AI-generated pattern transfer using Gemini 2.5 Flash</p>
                 </div>
             `;

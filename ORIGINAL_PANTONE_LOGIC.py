@@ -137,11 +137,20 @@ Respond with JSON:
             # Parse AI response
             try:
                 response_text = message.content[0].text
+                print(f"Claude API raw response (first 300 chars): {response_text[:300]}")
+                
+                # Check if response starts with error message
+                if response_text.startswith("An error") or "error" in response_text.lower()[:50]:
+                    print(f"Error in Claude response: {response_text}")
+                    return self._fallback_color_analysis(rgb, error=f"Claude API error: {response_text[:100]}")
+                
                 # Extract JSON from response
                 json_start = response_text.find('{')
                 json_end = response_text.rfind('}') + 1
                 if json_start >= 0 and json_end > json_start:
-                    ai_analysis = json.loads(response_text[json_start:json_end])
+                    json_str = response_text[json_start:json_end]
+                    print(f"Attempting to parse JSON: {json_str[:200]}...")
+                    ai_analysis = json.loads(json_str)
                 else:
                     ai_analysis = json.loads(response_text)
                 
