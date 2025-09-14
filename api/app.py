@@ -77,9 +77,6 @@ class handler(BaseHTTPRequestHandler):
                 <button onclick="switchTab('pantone')" id="tab-pantone" class="tab-btn flex-1 px-6 py-4 rounded-xl font-semibold transition-all bg-white shadow-md">
                     🎨 Pantone Colors
                 </button>
-                <button onclick="switchTab('texture')" id="tab-texture" class="tab-btn flex-1 px-6 py-4 rounded-xl font-semibold transition-all hover:bg-white hover:shadow-md">
-                    🧵 Texture Application
-                </button>
                 <button onclick="switchTab('gemini')" id="tab-gemini" class="tab-btn flex-1 px-6 py-4 rounded-xl font-semibold transition-all hover:bg-white hover:shadow-md">
                     ✨ Pattern Transfer
                 </button>
@@ -124,87 +121,6 @@ class handler(BaseHTTPRequestHandler):
             </div>
         </div>
 
-        <!-- Texture Application Section -->
-        <div id="section-texture" class="section hidden">
-            <div class="glass-morphism rounded-2xl p-8 shadow-2xl">
-                <h2 class="text-3xl font-bold mb-6 text-gray-800">AI Texture Application</h2>
-                
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Upload Garment Image</label>
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 transition-colors">
-                            <input type="file" id="texture-image" accept="image/*" class="hidden" onchange="previewImage('texture')">
-                            <label for="texture-image" class="cursor-pointer">
-                                <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
-                                <p class="text-gray-600">Upload garment image</p>
-                            </label>
-                        </div>
-                        <img id="texture-preview" class="mt-4 rounded-xl shadow-lg hidden max-h-48 mx-auto">
-                        
-                        <div class="mt-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-3">Select Texture Type</label>
-                            <div class="grid grid-cols-4 gap-2">
-                                <button onclick="selectTexture('lace')" class="texture-card p-3 bg-white rounded-lg text-center hover:bg-purple-50 border-2 border-transparent">
-                                    <span class="text-2xl">🕸️</span>
-                                    <p class="text-xs mt-1">Lace</p>
-                                </button>
-                                <button onclick="selectTexture('embroidery')" class="texture-card p-3 bg-white rounded-lg text-center hover:bg-purple-50 border-2 border-transparent">
-                                    <span class="text-2xl">🪡</span>
-                                    <p class="text-xs mt-1">Embroidery</p>
-                                </button>
-                                <button onclick="selectTexture('silk')" class="texture-card p-3 bg-white rounded-lg text-center hover:bg-purple-50 border-2 border-transparent">
-                                    <span class="text-2xl">✨</span>
-                                    <p class="text-xs mt-1">Silk</p>
-                                </button>
-                                <button onclick="selectTexture('satin')" class="texture-card p-3 bg-white rounded-lg text-center hover:bg-purple-50 border-2 border-transparent">
-                                    <span class="text-2xl">🌟</span>
-                                    <p class="text-xs mt-1">Satin</p>
-                                </button>
-                                <button onclick="selectTexture('leather')" class="texture-card p-3 bg-white rounded-lg text-center hover:bg-purple-50 border-2 border-transparent">
-                                    <span class="text-2xl">🎭</span>
-                                    <p class="text-xs mt-1">Leather</p>
-                                </button>
-                                <button onclick="selectTexture('velvet')" class="texture-card p-3 bg-white rounded-lg text-center hover:bg-purple-50 border-2 border-transparent">
-                                    <span class="text-2xl">🌹</span>
-                                    <p class="text-xs mt-1">Velvet</p>
-                                </button>
-                                <button onclick="selectTexture('mesh')" class="texture-card p-3 bg-white rounded-lg text-center hover:bg-purple-50 border-2 border-transparent">
-                                    <span class="text-2xl">🔲</span>
-                                    <p class="text-xs mt-1">Mesh</p>
-                                </button>
-                                <button onclick="selectTexture('sequin')" class="texture-card p-3 bg-white rounded-lg text-center hover:bg-purple-50 border-2 border-transparent">
-                                    <span class="text-2xl">💎</span>
-                                    <p class="text-xs mt-1">Sequin</p>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Intensity</label>
-                            <input type="range" id="texture-intensity" min="0" max="100" value="80" class="w-full">
-                            <div class="flex justify-between text-xs text-gray-500 mt-1">
-                                <span>Subtle</span>
-                                <span id="intensity-value">80%</span>
-                                <span>Strong</span>
-                            </div>
-                        </div>
-                        
-                        <button onclick="applyTexture()" class="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transition-all">
-                            Apply Texture
-                        </button>
-                    </div>
-                    
-                    <div>
-                        <h3 class="text-xl font-semibold mb-4 text-gray-700">Result</h3>
-                        <div id="texture-result" class="bg-gray-50 rounded-xl p-8 min-h-[400px] flex items-center justify-center">
-                            <p class="text-gray-500 text-center">Textured image will appear here</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Gemini Pattern Transfer Section -->
         <div id="section-gemini" class="section hidden">
@@ -261,7 +177,6 @@ class handler(BaseHTTPRequestHandler):
     </div>
 
     <script>
-        let selectedTexture = null;
         let selectedImages = {};
         let selectedPantoneColor = null;
         
@@ -327,17 +242,6 @@ class handler(BaseHTTPRequestHandler):
                 };
                 reader.readAsDataURL(input.files[0]);
             }
-        }
-        
-        // Texture selection
-        function selectTexture(type) {
-            selectedTexture = type;
-            document.querySelectorAll('.texture-card').forEach(card => {
-                card.classList.remove('border-purple-500', 'bg-purple-50');
-                card.classList.add('border-transparent');
-            });
-            event.target.closest('.texture-card').classList.remove('border-transparent');
-            event.target.closest('.texture-card').classList.add('border-purple-500', 'bg-purple-50');
         }
         
         // Intensity slider
@@ -442,8 +346,8 @@ class handler(BaseHTTPRequestHandler):
             showStatus(`Selected: ${name} (${code})`, 'success');
         }
         
-        // Texture application
-        async function applyTexture() {
+        // Gemini pattern transfer
+        async function transferPattern() {
             if (!selectedImages.texture || !selectedTexture) {
                 showStatus('Please upload an image and select a texture', 'error');
                 return;

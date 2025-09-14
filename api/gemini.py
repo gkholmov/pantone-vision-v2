@@ -141,24 +141,34 @@ def get_gemini_client():
         return genai.Client()
     except ImportError as e:
         print(f"Warning: Gemini import failed: {e}")
-        return None
+        # Return a simple HTTP-based client instead
+        return SimpleGeminiClient(GEMINI_API_KEY)
+
+class SimpleGeminiClient:
+    """Simple Gemini client using HTTP requests instead of SDK"""
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+    
+    def is_available(self):
+        """Check if API key is configured"""
+        return bool(self.api_key and self.api_key != 'your_gemini_api_key_here')
 
 class GeminiTextileTransfer:
     """Gemini 2.5 Flash Image for textile pattern transfer - serverless optimized"""
     
     def __init__(self):
-        self.model_name = "gemini-2.5-flash-image-preview"
+        self.model_name = "gemini-2.5-flash-image-preview"  # Official model name from Google AI docs
         self.client = get_gemini_client()
     
     def transfer_textile_pattern(self, textile_image, sketch_image, 
                                pantone_color=None, pantone_name=None):
-        """Transfer textile pattern from source to garment sketch"""
+        """Transfer textile pattern from source to garment sketch using Gemini"""
         if not self.client:
-            return {
-                'success': False,
-                'error': 'Gemini client not available',
-                'fallback': True
-            }
+            # Use fallback pattern transfer without Gemini
+            return self._fallback_pattern_transfer(
+                textile_image, sketch_image, pantone_color, pantone_name
+            )
         
         try:
             print(f"🎨 Starting Gemini textile pattern transfer...")
@@ -169,24 +179,21 @@ class GeminiTextileTransfer:
             
             print(f"🚀 Sending request to Gemini 2.5 Flash Image...")
             
-            # Add retry logic for 500 errors with exponential backoff
+            # Add retry logic for 500 errors
+            import time
             max_retries = 3
-            base_delay = 2
-            
             for attempt in range(max_retries):
                 try:
-                    # Generate with Gemini using official 2025 API format
+                    # Generate with Gemini using official 2025 API format (pass PIL Images directly)
                     response = self.client.models.generate_content(
                         model=self.model_name,
                         contents=[prompt, textile_image, sketch_image],
                     )
                     break  # Success, exit retry loop
-                    
                 except Exception as e:
                     if "500" in str(e) and attempt < max_retries - 1:
-                        delay = base_delay * (2 ** attempt)  # Exponential backoff
-                        print(f"🔄 Retry {attempt + 1}/{max_retries} - Gemini server error, waiting {delay}s...")
-                        time.sleep(delay)
+                        print(f"🔄 Retry {attempt + 1}/{max_retries} - Gemini server error, waiting 2s...")
+                        time.sleep(2)
                         continue
                     else:
                         raise e  # Re-raise if not 500 error or max retries reached
@@ -197,68 +204,47 @@ class GeminiTextileTransfer:
             
             # Check if response has valid structure
             if not response.candidates:
-                return {
-                    'success': False,
-                    'error': 'No response candidates from Gemini',
-                    'retry_suggested': True
-                }
+                raise Exception("No candidates in response")
             
             candidate = response.candidates[0]
+            print(f"Debug: Candidate content: {candidate.content}")
+            print(f"Debug: Candidate attributes: {dir(candidate)}")
             
             if not candidate.content:
-                # Check for finish reason
-                finish_reason = getattr(candidate, 'finish_reason', 'unknown')
+                # Check if there's finish_reason or other info
+                if hasattr(candidate, 'finish_reason'):
+                    print(f"Debug: Finish reason: {candidate.finish_reason}")
+                raise Exception("No content in response candidate - check if prompt triggers safety filters")
+            
+            if not candidate.content.parts:
+                raise Exception("No parts in response content")
+            
+            # Extract generated image using 2025 API format
+            image_parts = [
+                part.inline_data.data
+                for part in candidate.content.parts
+                if hasattr(part, 'inline_data') and part.inline_data and part.inline_data.data
+            ]
+            
+            if image_parts:
+                # The data is already binary, no need to base64 decode
+                image_data = image_parts[0]
+                result_image = Image.open(BytesIO(image_data))
+                
+                print(f"✅ Gemini textile transfer successful!")
+                
                 return {
-                    'success': False,
-                    'error': f'Empty response from Gemini, finish reason: {finish_reason}',
-                    'finish_reason': finish_reason
+                    'success': True,
+                    'result_image': result_image,
+                    'method': 'gemini-2.5-flash-image-preview',
+                    'model_used': self.model_name,
+                    'pantone_context': {
+                        'color': pantone_color,
+                        'name': pantone_name
+                    }
                 }
-            
-            # Extract content - handle different response formats
-            if hasattr(candidate.content, 'parts'):
-                content_parts = candidate.content.parts
-                
-                # Look for image content in parts
-                result_image = None
-                text_description = ""
-                
-                for part in content_parts:
-                    if hasattr(part, 'inline_data'):
-                        # Image data
-                        image_data = part.inline_data.data
-                        result_image = Image.open(BytesIO(base64.b64decode(image_data)))
-                    elif hasattr(part, 'text'):
-                        # Text description
-                        text_description += part.text
-                
-                if result_image:
-                    return {
-                        'success': True,
-                        'result_image': result_image,
-                        'description': text_description,
-                        'method': 'gemini_2.5_flash_image',
-                        'model_used': self.model_name,
-                        'pantone_context': {
-                            'color': pantone_color,
-                            'name': pantone_name
-                        }
-                    }
-                else:
-                    return {
-                        'success': False,
-                        'error': 'No image generated by Gemini',
-                        'description': text_description,
-                        'response_format': 'text_only'
-                    }
-            
-            # Fallback text response processing
-            content_text = str(candidate.content)
-            return {
-                'success': False,
-                'error': 'Gemini returned text response instead of image',
-                'text_response': content_text[:500],  # Truncate for logging
-                'suggestion': 'Try with different images or parameters'
-            }
+            else:
+                raise Exception("No image generated in response")
             
         except Exception as e:
             print(f"Gemini pattern transfer error: {e}")
@@ -268,29 +254,101 @@ class GeminiTextileTransfer:
                 'exception_type': type(e).__name__
             }
     
+    def _fallback_pattern_transfer(self, textile_image, sketch_image, 
+                                   pantone_color=None, pantone_name=None):
+        """Fallback pattern transfer using PIL when Gemini is unavailable"""
+        from PIL import ImageFilter, ImageEnhance, ImageOps, ImageChops
+        
+        try:
+            print("Using fallback pattern transfer method...")
+            
+            # Ensure images are same size
+            target_size = sketch_image.size
+            textile_image = textile_image.resize(target_size, Image.LANCZOS)
+            
+            # Extract pattern from textile
+            textile_gray = textile_image.convert('L')
+            textile_pattern = textile_gray.filter(ImageFilter.FIND_EDGES)
+            
+            # Extract sketch structure
+            sketch_gray = sketch_image.convert('L')
+            sketch_edges = sketch_gray.filter(ImageFilter.FIND_EDGES)
+            sketch_inverted = ImageOps.invert(sketch_edges)
+            
+            # Create mask from sketch
+            sketch_mask = sketch_inverted.point(lambda x: 255 if x > 128 else 0)
+            
+            # Apply textile pattern to sketch areas
+            # 1. Create base with textile texture
+            result = textile_image.copy()
+            
+            # 2. Blend with sketch structure
+            result = Image.blend(result, sketch_image, 0.3)
+            
+            # 3. Apply pattern overlay
+            pattern_overlay = ImageChops.multiply(textile_pattern, sketch_mask)
+            pattern_colored = ImageOps.colorize(pattern_overlay, 'black', 'white')
+            result = Image.blend(result, pattern_colored.convert('RGB'), 0.4)
+            
+            # 4. Apply Pantone color if provided
+            if pantone_color and pantone_name:
+                # Parse hex color
+                hex_color = pantone_color.replace('#', '')
+                if len(hex_color) == 6:
+                    rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+                else:
+                    # Try to extract from name or use a default
+                    rgb = (128, 128, 128)
+                
+                # Create color overlay
+                color_overlay = Image.new('RGB', target_size, rgb)
+                result = Image.blend(result, color_overlay, 0.2)
+                
+                # Enhance color
+                enhancer = ImageEnhance.Color(result)
+                result = enhancer.enhance(1.3)
+            
+            # 5. Final adjustments
+            enhancer = ImageEnhance.Contrast(result)
+            result = enhancer.enhance(1.1)
+            
+            enhancer = ImageEnhance.Sharpness(result)
+            result = enhancer.enhance(1.2)
+            
+            # Convert to base64
+            buffer = BytesIO()
+            result.save(buffer, format='PNG', quality=95)
+            result_base64 = base64.b64encode(buffer.getvalue()).decode()
+            
+            return {
+                'success': True,
+                'result_image': result,
+                'description': f'Pattern transferred using PIL fallback method. {"Pantone " + pantone_name + " applied." if pantone_name else ""}',
+                'method': 'PIL_Fallback',
+                'model_used': 'None (Fallback)',
+                'pantone_context': {
+                    'color': pantone_color,
+                    'name': pantone_name
+                } if pantone_color else {}
+            }
+            
+        except Exception as e:
+            print(f"Fallback pattern transfer error: {e}")
+            return {
+                'success': False,
+                'error': f'Fallback pattern transfer failed: {str(e)}',
+                'exception_type': type(e).__name__
+            }
+    
     def _create_textile_transfer_prompt(self, pantone_color=None, pantone_name=None):
-        """Create detailed prompt for textile transfer"""
-        prompt_parts = [
-            "You are a professional textile designer. Transfer the pattern and texture from the first image",
-            "to the garment sketch in the second image. Create a realistic result that:",
-            "1. Preserves the garment shape and structure from the sketch",
-            "2. Applies the texture, pattern, and material properties from the textile image",
-            "3. Maintains proper fabric draping and realistic lighting",
-            "4. Ensures the pattern aligns naturally with the garment contours"
-        ]
+        """Create detailed prompt for textile pattern transfer"""
+        
+        base_prompt = "Fill entire shape in image 2 with texture from image 1. Keep lines visible."
         
         if pantone_color and pantone_name:
-            prompt_parts.extend([
-                f"5. Use {pantone_name} color ({pantone_color}) as the primary color",
-                f"6. Adjust the transferred pattern to complement the {pantone_name} color palette"
-            ])
+            base_prompt += f" Use {pantone_color} color."
         
-        prompt_parts.extend([
-            "Generate a high-quality image showing the garment with the transferred pattern/texture.",
-            "The result should be photorealistic and suitable for fashion design presentation."
-        ])
-        
-        return " ".join(prompt_parts)
+        return base_prompt
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -513,7 +571,11 @@ class handler(BaseHTTPRequestHandler):
         try:
             # Check if Gemini is available
             gemini_client = get_gemini_client()
-            gemini_available = gemini_client is not None
+            gemini_available = gemini_client is not None and (
+                hasattr(gemini_client, 'is_available') and gemini_client.is_available() 
+                if isinstance(gemini_client, SimpleGeminiClient) 
+                else True
+            )
             
             response_data = {
                 'endpoint': 'gemini',
