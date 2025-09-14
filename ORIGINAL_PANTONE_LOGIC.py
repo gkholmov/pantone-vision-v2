@@ -62,6 +62,7 @@ class UniversalColorMatcher:
             import anthropic
             
             if not self.api_key or self.api_key == 'your_anthropic_api_key_here':
+                print(f"API key issue - key exists: {bool(self.api_key)}, key value starts with: {self.api_key[:10] if self.api_key else 'None'}")
                 return self._fallback_color_analysis(rgb)
                 
             client = anthropic.Anthropic(api_key=self.api_key)
@@ -172,6 +173,9 @@ Respond with JSON:
                     }
                 }
                 
+        except ImportError as e:
+            print(f"Anthropic import error: {e}")
+            return self._fallback_color_analysis(rgb, error=f"Anthropic not installed: {e}")
         except Exception as e:
             print(f"AI identification error: {e}")
             import traceback

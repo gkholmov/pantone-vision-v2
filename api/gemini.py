@@ -149,10 +149,22 @@ class SimpleGeminiClient:
     def __init__(self, api_key):
         self.api_key = api_key
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+        # Add models attribute to match the expected interface
+        self.models = self
     
     def is_available(self):
         """Check if API key is configured"""
         return bool(self.api_key and self.api_key != 'your_gemini_api_key_here')
+    
+    def generate_content(self, model, contents):
+        """Generate content using Gemini API via HTTP"""
+        import requests
+        
+        if not self.is_available():
+            raise Exception("Gemini API key not configured")
+        
+        # For now, return an error to use fallback
+        raise Exception("SimpleGeminiClient HTTP implementation not complete - using fallback")
 
 class GeminiTextileTransfer:
     """Gemini 2.5 Flash Image for textile pattern transfer - serverless optimized"""

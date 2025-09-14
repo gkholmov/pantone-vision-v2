@@ -16,6 +16,9 @@ python-dotenv==1.0.0
 # AI SDK for Pantone color matching ~2MB
 anthropic==0.39.0
 
+# Google AI SDK for Gemini (optional, will use fallback if not available)
+# google-generativeai==0.8.3
+
 # TOTAL: ~53MB (well under 250MB limit)
 # All API functionality works via HTTP requests
 # Includes full Pantone AI matching capabilities
